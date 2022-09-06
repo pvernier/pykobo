@@ -180,11 +180,11 @@ class Manager:
 
     def download_form(self, uid: str, format: str) -> None:
         '''Given the uid of a form and a format ('xls' or 'xml')
-        download the form in that format'''
+        download the form in that format in the current directory'''
 
         if format not in ['xls', 'xml']:
             raise ValueError(
-                f"The file format {format} is not supported. Recognized format are 'xls' and 'xml'")
+                f"The file format '{format}' is not supported. Recognized formats are 'xls' and 'xml'")
 
         URL = f"{self.url_api}/assets/{uid}.{format}"
         filename = URL.split('/')[-1]
