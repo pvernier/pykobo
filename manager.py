@@ -4,9 +4,8 @@ import numpy as np
 
 
 class Manager:
-    def __init__(self, url_api, format, token) -> None:
+    def __init__(self, url_api, token) -> None:
         self.url_api = url_api
-        self.format = format
         self.token = token
         self.headers = {"Authorization": f'Token {token}'}
 
@@ -30,13 +29,13 @@ class Manager:
         '''Given the uid of a form
         returns the URL of the data in JSON'''
 
-        return f'{self.url_api}/assets/{uid}/data?format={self.format}'
+        return f'{self.url_api}/assets/{uid}/data?format=json'
 
     def get_url_data_metadata(self, uid: str) -> str:
         '''Given the uid of a form
         returns the URL of the metadata in JSON'''
 
-        return f'{self.url_api}/assets/{uid}/?format={self.format}'
+        return f'{self.url_api}/assets/{uid}/?format=json'
 
     def fetch_form_data(self, uid: str, with_labels: bool = False) -> pd.DataFrame:
         '''Given the uid of a form
