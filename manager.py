@@ -8,18 +8,14 @@ class Manager:
         self.url_api = url_api
         self.format = format
         self.token = token
-        self.headers = self._build_headers(self.token)
-        self._params = {"format": self.format}
-
-    def _build_headers(self, token: str) -> str:
-        return {"Authorization": f'Token {token}', "Accept": f"application/{self.format}"}
+        self.headers = {"Authorization": f'Token {token}'}
 
     def get_forms(self) -> dict:
         '''Return a dictionary of all the forms the user has access to with its token.
         The keys are the UID and the values, the name of the forms'''
         url_assets = f'{self.url_api}/assets.json'
         res = requests.get(
-            url=url_assets, headers=self.headers, params=self._params)
+            url=url_assets, headers=self.headers)
 
         # If error while fetching the data, return an empty dict
         if res.status_code != 200:
@@ -52,7 +48,7 @@ class Manager:
         url = self.get_url_data_form(uid)
 
         # Fetch the data
-        res = requests.get(url=url, headers=self.headers, params=self._params)
+        res = requests.get(url=url, headers=self.headers)
 
         # If error while fetching the data, return an empty DF
         if res.status_code != 200:
@@ -71,7 +67,7 @@ class Manager:
         # Fetch the metadata
         url_meta = self.get_url_data_metadata(uid)
         res_meta = requests.get(
-            url=url_meta, headers=self.headers, params=self._params)
+            url=url_meta, headers=self.headers)
 
         fields = res_meta.json()['content']['survey']
         form_columns = []
@@ -83,8 +79,8 @@ class Manager:
             except KeyError:
                 name = field['$autoname']
 
-            # The JSON object doesn't have properties for empty column
-            # so we need to add them here so we don't get issues later
+            # The JSON object doesn't have properties for empty columns
+            # so we need to add them here to do not get issues later
             if name not in df.columns:
                 df[name] = np.nan
 
@@ -181,3 +177,19 @@ class Manager:
         df.drop(gps_field, axis=1, inplace=True)
 
         return df
+
+    def download_form(self, uid: str, format: str) -> None:
+        '''Given the uid of a form and a format ('xls' or 'xml')
+        download the form in that format'''
+
+        if format not in ['xls', 'xml']:
+            raise ValueError(
+                f"The file format {format} is not supported. Recognized format are 'xls' and 'xml'")
+
+        URL = f"{self.url_api}/assets/{uid}.{format}"
+        filename = URL.split('/')[-1]
+
+        r = requests.get(URL, headers=self.headers)
+
+        with open(filename, 'wb') as f:
+            f.write(r.content)
