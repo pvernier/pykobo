@@ -1,3 +1,5 @@
+from typing import Union
+
 import requests
 import pandas as pd
 import numpy as np
@@ -37,8 +39,10 @@ class Manager:
 
         return f'{self.url_api}/assets/{uid}/?format=json'
 
-    def fetch_form_data(self, uid: str, with_labels: bool = False) -> pd.DataFrame:
-        '''Given the uid of a form
+    def fetch_form_data(self, uid: str, with_labels: bool = False) -> Union[pd.DataFrame, dict]:
+        '''
+        XXX TO UPDATE
+        Given the uid of a form
         returns the data as a Pandas DataFrame
         The boolean `with_labels` indicates if we return the DataFrame with labels
         for the columns name and values or without (default)'''
@@ -54,14 +58,59 @@ class Manager:
             return pd.DataFrame()
 
         data = res.json()['results']
+
         df = pd.DataFrame(data)
 
-        if with_labels:
-            self._fetch_form_labels(df, uid)
+        children = self._extract_repeats(data)
+
+        # If the form has at least one repeat group
+        if children:
+            # Add a column '_index' that can be used to join with the parent DF
+            # with the children DFs (which have the column '_parent_index')
+            df['_index'] = df.index + 1
+
+            # Move column '_index' to the first position
+            col_idx_parent = df.pop('_index')
+            df.insert(0, col_idx_parent.name, col_idx_parent)
+
+            # In the parent DF delete the columns that contain the repeat groups
+            df.drop(columns=children.keys(), inplace=True)
+
+            return {'parent': df, 'children': children}
 
         return df
+        # if with_labels:
+        #     self._fetch_form_labels(df, uid)
+
+        # return data
+
+    def _extract_repeats(self, rows: list) -> dict:
+        '''TO DO
+
+        '_parent_index' is the column name used in Kobo in the child table
+        when downloading the data, that allow to join the data with the parent table
+        '''
+        repeats = {}
+        for idx_parent, row in enumerate(rows):
+            for column, value in row.items():
+                if not column.startswith('_') and type(value) == list:
+                    if column not in repeats:
+                        repeats[column] = []
+                    for child in value:
+                        child['_parent_index'] = idx_parent + 1
+                    repeats[column] = repeats[column] + value
+
+        for repeat_name, repeat_data in repeats.items():
+            repeats[repeat_name] = pd.DataFrame(repeat_data)
+
+            # Move column "_parent_index" to the first position
+            col_idx_join = repeats[repeat_name].pop('_parent_index')
+            repeats[repeat_name].insert(0, col_idx_join.name, col_idx_join)
+
+        return repeats
 
     def _fetch_form_labels(self, df: pd.DataFrame, uid: str) -> None:
+        return
         '''TO DO'''
         # Fetch the metadata
         url_meta = self.get_url_data_metadata(uid)
