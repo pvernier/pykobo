@@ -98,6 +98,8 @@ class Form:
 
         self._split_gps_coords()
 
+        self._remove_metadata()
+
     def _fetch_structure_content(self):
         res = requests.get(
             url=self.__url_structure, headers=self.headers)
@@ -241,13 +243,29 @@ class Form:
             self.has_repeats = True
             self.repeats = repeats
 
-    def remove_metadata(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _remove_metadata(self) -> pd.DataFrame:
         '''Remove the metadata columns (meaning the ones starting with an '_',
         plus the 4 columns: 'formhub/uuid', 'meta/instanceID', 'start', 'end') 
         of the DataFrame'''
 
+        self._delete_columns_in_df(self.data)
+
+        if self.has_repeats:
+            for k, v in self.repeats.items():
+                self._delete_columns_in_df(v)
+
+    def _delete_columns_in_df(self, df: pd.DataFrame) -> None:
+
         metadata_columns = [
             column for column in df.columns if column.startswith('_')]
+
+        # If we have repeat groups, keep the columns that make the join
+        # possible between the parent and children DFs
+        if self.has_repeats:
+            if '_index' in df.columns:
+                metadata_columns.remove('_index')
+            if '_parent_index' in df.columns:
+                metadata_columns.remove('_parent_index')
 
         others = ['formhub/uuid', 'meta/instanceID', 'start',
                   'end', 'today',  'username', 'deviceid']
