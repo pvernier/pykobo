@@ -27,7 +27,8 @@ class Form:
 
         self.__url_structure = asset['url']
         self.__url_data = asset['data']
-        sef.__base_url = asset['download'][0]
+        self.__base_url = '/'.join(asset['downloads']
+                                   [0]['url'].split('/')[:-1])
 
     def fetch_data(self, columns_as: str = 'name', answers_as: str = 'name') -> Union[pd.DataFrame, dict]:
         '''
@@ -269,7 +270,7 @@ class Form:
             raise ValueError(
                 f"The file format '{format}' is not supported. Recognized formats are 'xls' and 'xml'")
 
-        URL = f"{self.url_api}/assets/{self.uid}.{format}"
+        URL = f"{self.__base_url}/{self.uid}.{format}"
         filename = URL.split('/')[-1]
 
         r = requests.get(URL, headers=self.headers)
