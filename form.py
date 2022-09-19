@@ -13,6 +13,9 @@ class Form:
         self.metadata = {}
         self.data = None
         self.__structure_content = None
+        self.has_geo = False
+        self.geo = None
+        self.__columns_as = None
 
     def __repr__(self):
         return f"Form('{self.uid}')"
@@ -40,6 +43,8 @@ class Form:
         if answers_as not in ['name', 'label']:
             raise ValueError(
                 "The accepted values for the attribute 'answers_as' are 'name' or 'label'.")
+
+        self.__columns_as = columns_as
 
         self._get_questions()
 
@@ -74,24 +79,24 @@ class Form:
             self.data.insert(0, col_idx_parent.name, col_idx_parent)
 
             # In the parent DF delete the columns that contain the repeat groups
-            print(self.repeats.keys())
+
             # In the API there is a column with the same name as the name of
-            # the repeat group + the suffix '_count' just befor the repeat group.
+            # the repeat group + the suffix '_count' just before the repeat group.
             # We can delete it
             repeats_count = [f'{c}_count' for c in self.repeats.keys()]
             to_delete = list(self.repeats.keys()) + repeats_count
             self.data.drop(columns=to_delete, inplace=True)
 
-        print(self.data.columns)
         if columns_as == 'label':
             self._rename_columns(self.data, 'name_with_prefix', 'label')
-            print(self.data.columns)
             # if self.has_repeats:
             #     for repeat_name, repeat_data in self.repeats.items():
             #         print(repeat_data.columns)
             #         self._rename_columns(
             #             repeat_data, 'name_with_prefix', 'label')
             #         print(repeat_data.columns)
+
+        self._split_gps_coords()
 
     def _fetch_structure_content(self):
         res = requests.get(
@@ -140,6 +145,12 @@ class Form:
                     q.label_with_prefix = f'{prefix_label}/{label_q}'
 
                 self.questions.append(q)
+
+                # Identify the geopoint if any
+                if field['type'] == 'geopoint':
+                    self.has_geo = True
+                    self.geo = q
+
         for q in self.questions:
             print(q)
 
@@ -249,18 +260,21 @@ class Form:
 
         df.drop(metadata_columns, axis=1, inplace=True)
 
-    def split_gps_coords(self, df: pd.DataFrame, gps_field: str) -> pd.DataFrame:
+    def _split_gps_coords(self) -> None:
+        '''Split the column of type 'geopoint' into 4 columns
+        'latitude', 'longitude', 'altitude', 'gps_precision'
+        XXX It assumes this column is in the parent DF (self.data)
+        not in a repeat group. TO IMPROVE
+        '''
 
-        if gps_field not in df.columns:
-            raise ValueError(
-                f"The DataFrame doesn't contain the column '{gps_field}'")
+        geo_column = getattr(self.geo, self.__columns_as)
 
-        df[['latitude', 'longitude', 'altitude', 'gps_precision']
-           ] = df[gps_field].str.split(' ', expand=True)
+        if geo_column in self.data.columns:
 
-        df.drop(gps_field, axis=1, inplace=True)
+            self.data[['latitude', 'longitude', 'altitude', 'gps_precision']
+                      ] = self.data[geo_column].str.split(' ', expand=True)
 
-        return df
+            self.data.drop(geo_column, axis=1, inplace=True)
 
     def download_form(self, format: str) -> None:
         '''Given the uid of a form and a format ('xls' or 'xml')
