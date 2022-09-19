@@ -153,8 +153,8 @@ class Form:
                     self.has_geo = True
                     self.geo = q
 
-        for q in self.questions:
-            print(q)
+        # for q in self.questions:
+        #     print(q)
 
     def _rename_columns(self, df, old, new):
         dict_rename = {}
@@ -225,7 +225,6 @@ class Form:
 
         if repeats:
             for repeat_name, repeat_data in repeats.items():
-                print(repeat_name)
                 repeats[repeat_name] = pd.DataFrame(repeat_data)
 
                 # In the repeat groups the columns names have the
