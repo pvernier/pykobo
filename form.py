@@ -19,10 +19,10 @@ class koboForm:
         self.__columns_as = None
         self.root_structure = []
         self.repeats_structure = {}
-        self.__structure_content = None
+        self.__content = None
 
     def __repr__(self):
-        return f"koboForm('{self.uid}')"
+        return f"KoboForm('{self.uid}')"
 
     def _extract_from_asset(self, asset: dict) -> None:
         self.metadata['name'] = asset['name']
@@ -35,45 +35,28 @@ class koboForm:
         self.__base_url = '/'.join(asset['downloads']
                                    [0]['url'].split('/')[:-1])
 
-    def _fetch_structure_content(self):
+    def _fetch_structure(self):
         res = requests.get(
             url=self.__url_structure, headers=self.headers)
-        self.__structure_content = res.json()['content']
+        self.__content = res.json()['content']
 
-    def _get_choices(self):
+    def _get_survey(self) -> None:
+        '''Go through all the elements of the survey and build the root structure (and the structure
+        of the repeat groups if any) has a list of `Question` objects. Each `Question` object has a name
+        and a label so it's possible to display the data using any of the two'''
 
-        formatted_choices = {}
-        choices = self.__structure_content['choices']
-        for choice in choices:
-            if choice['list_name'] not in formatted_choices:
-                formatted_choices[choice['list_name']] = []
-            formatted_choices[choice['list_name']].append(
-                {'name': choice['name'], 'label': choice['label'][0]})
+        if not self.__content:
+            self._fetch_structure()
 
-        for q in self.root_structure:
-            if q.type == 'select_one' or q.type == 'select_multiple':
-                q.choices = formatted_choices[q.select_from_list_name]
-
-        if self.has_repeats:
-            for k, repeat in self.repeats_structure.items():
-                for q in repeat:
-                    if q.type == 'select_one' or q.type == 'select_multiple':
-                        q.choices = formatted_choices[q.select_from_list_name]
-
-    def _get_structure(self) -> None:
-        '''TO DO'''
-
-        if not self.__structure_content:
-            self._fetch_structure_content()
-
-        fields = self.__structure_content['survey']
+        survey = self.__content['survey']
 
         group_name = None
         group_label = None
         repeat_name = None
         repeat_label = None
         in_repeat = False
-        for idx, field in enumerate(fields):
+
+        for idx, field in enumerate(survey):
 
             # Identify groups and repeats if any
             if field['type'] == 'begin_group':
@@ -127,6 +110,28 @@ class koboForm:
                     self.repeats_structure[repeat_name].append(q)
                 else:
                     self.root_structure.append(q)
+
+    def _get_choices(self):
+        '''For all the questions of type 'select_one' or 'select_multiple' assign their corresponding choices.
+        Each choice has a name and label so it's possible to display the data using any of the two.'''
+
+        formatted_choices = {}
+        choices = self.__content['choices']
+        for choice in choices:
+            if choice['list_name'] not in formatted_choices:
+                formatted_choices[choice['list_name']] = []
+            formatted_choices[choice['list_name']].append(
+                {'name': choice['name'], 'label': choice['label'][0]})
+
+        for q in self.root_structure:
+            if q.type == 'select_one' or q.type == 'select_multiple':
+                q.choices = formatted_choices[q.select_from_list_name]
+
+        if self.has_repeats:
+            for k, repeat in self.repeats_structure.items():
+                for q in repeat:
+                    if q.type == 'select_one' or q.type == 'select_multiple':
+                        q.choices = formatted_choices[q.select_from_list_name]
 
     # def fetch_data(self, columns_as: str = 'name', answers_as: str = 'name') -> Union[pd.DataFrame, dict]:
     #     '''
@@ -203,13 +208,13 @@ class koboForm:
 
     # def _answers_as_label(self) -> None:
 
-    #     if not self.__structure_content:
-    #         self._fetch_structure_content()
+    #     if not self.__content:
+    #         self._fetch_structure()
 
     #     df = self.data
 
     #     formatted_choices = {}
-    #     choices = self.__structure_content['choices']
+    #     choices = self.__content['choices']
     #     for choice in choices:
     #         if choice['list_name'] not in formatted_choices:
     #             formatted_choices[choice['list_name']] = []
