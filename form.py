@@ -7,7 +7,7 @@ import numpy as np
 from .types import Question
 
 
-class Form:
+class koboForm:
     def __init__(self, uid: str) -> None:
         self.uid = uid
         self.metadata = {}
@@ -22,7 +22,7 @@ class Form:
         self.__structure_content = None
 
     def __repr__(self):
-        return f"Form('{self.uid}')"
+        return f"koboForm('{self.uid}')"
 
     def _extract_from_asset(self, asset: dict) -> None:
         self.metadata['name'] = asset['name']
