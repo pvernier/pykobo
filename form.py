@@ -12,14 +12,14 @@ class Form:
         self.uid = uid
         self.metadata = {}
         self.data = None
-        self.__structure_content = None
         self.has_geo = False
         self.geo = False
         self.has_repeats = False
         self.repeats = {}
         self.__columns_as = None
         self.root_structure = []
-        self.repeats_structure = []
+        self.repeats_structure = {}
+        self.__structure_content = None
 
     def __repr__(self):
         return f"Form('{self.uid}')"
@@ -29,7 +29,6 @@ class Form:
         self.metadata['owner'] = asset['owner__username']
         self.metadata['date_created'] = asset['date_created']
         self.metadata['date_modified'] = asset['date_modified']
-        self.structure = []
 
         self.__url_structure = asset['url']
         self.__url_data = asset['data']
@@ -51,37 +50,15 @@ class Form:
             formatted_choices[choice['list_name']].append(
                 {'name': choice['name'], 'label': choice['label'][0]})
 
-        print(formatted_choices)
+        for q in self.root_structure:
+            if q.type == 'select_one' or q.type == 'select_multiple':
+                q.choices = formatted_choices[q.select_from_list_name]
 
-        # for column in form_columns:
-        #     if column['select_one'] or column['select_multiple']:
-        #         if column['select_one']:
-        #             uid_choice = column['select_one']
-
-        #             for choice in formatted_choices[uid_choice]:
-        #                 df.loc[df[column['label']] == choice['name'],
-        #                        column['label']] = choice['label']
-
-        #         else:
-        #             uid_choice = column['select_multiple']
-        #         column['value_labels'] = formatted_choices[uid_choice]
-
-        # # For multiple values we have to loop again
-        # for column in form_columns:
-        #     if column['select_multiple']:
-        #         unique_values = list(df[column['label']].unique())
-
-        #         for unique in unique_values:
-        #             if pd.isna(unique):
-        #                 pass
-        #             else:
-        #                 combinations = unique.split()
-        #                 label = [c['label']
-        #                          for c in column['value_labels'] if c['name'] in combinations]
-        #                 label_formatted = ', '.join(label)
-
-        #                 df.loc[df[column['label']] == unique,
-        #                        column['label']] = label_formatted
+        if self.has_repeats:
+            for k, repeat in self.repeats_structure.items():
+                for q in repeat:
+                    if q.type == 'select_one' or q.type == 'select_multiple':
+                        q.choices = formatted_choices[q.select_from_list_name]
 
     def _get_structure(self) -> None:
         '''TO DO'''
@@ -93,27 +70,36 @@ class Form:
 
         group_name = None
         group_label = None
+        repeat_name = None
+        repeat_label = None
         in_repeat = False
         for idx, field in enumerate(fields):
 
             # Identify groups and repeats if any
-            if field['type'] == 'begin_group' or field['type'] == 'begin_repeat':
+            if field['type'] == 'begin_group':
 
                 group_name = field['name']
                 if 'label' in field:
                     group_label = field['label']
 
-                if field['type'] == 'begin_repeat':
-                    in_repeat = True
-                    self.has_repeats = True
-                    self.repeats[group_name] = None
+            if field['type'] == 'begin_repeat':
 
-            if field['type'] == 'end_group' or field['type'] == 'end_repeat':
+                repeat_name = field['name']
+                if 'label' in field:
+                    repeat_label = field['label']
+
+                in_repeat = True
+                self.has_repeats = True
+                self.repeats_structure[repeat_name] = []
+
+            if field['type'] == 'end_group':
                 group_name = None
                 group_label = None
 
-                if field['type'] == 'end_repeat':
-                    in_repeat = False
+            if field['type'] == 'end_repeat':
+                in_repeat = False
+                repeat_name = None
+                repeat_label = None
 
             if field['type'] != 'begin_group' and field['type'] != 'begin_repeat' and field['type'] != 'end_group' and field['type'] != 'end_repeat':
                 name_q = field['name']
@@ -123,8 +109,14 @@ class Form:
                     label_q = name_q
                 q = Question(idx, name_q, field['type'], label_q)
 
+                if field['type'] == 'select_one' or field['type'] == 'select_multiple':
+                    q.select_from_list_name = field['select_from_list_name']
+
                 q.group_name = group_name
                 q.group_label = group_label
+
+                q.repeat_name = repeat_name
+                q.repeat_label = repeat_label
 
                 # Identify the geopoint if any
                 if field['type'] == 'geopoint':
@@ -132,7 +124,7 @@ class Form:
                     self.geo = q
 
                 if in_repeat:
-                    self.repeats_structure.append(q)
+                    self.repeats_structure[repeat_name].append(q)
                 else:
                     self.root_structure.append(q)
 
