@@ -1,6 +1,6 @@
 import requests
 
-from .form import Form
+from .form import KoboForm
 
 
 class Manager:
@@ -26,13 +26,13 @@ class Manager:
 
         forms = []
         for form in self._assets:
-            f = Form(uid=form['uid'])
+            f = KoboForm(uid=form['uid'])
             f._extract_from_asset(form)
             f.headers = self.headers
             forms.append(f)
         return forms
 
-    def get_form(self, uid: str) -> Form:
+    def get_form(self, uid: str) -> KoboForm:
         if not self._assets:
             forms = self.get_forms()
         form = [f for f in forms if f.uid == uid][0]

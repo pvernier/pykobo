@@ -7,7 +7,7 @@ import numpy as np
 from .types import Question
 
 
-class koboForm:
+class KoboForm:
     def __init__(self, uid: str) -> None:
         self.uid = uid
         self.metadata = {}
@@ -24,29 +24,85 @@ class koboForm:
     def __repr__(self):
         return f"KoboForm('{self.uid}')"
 
-    def _extract_from_asset(self, asset: dict) -> None:
-        self.metadata['name'] = asset['name']
-        self.metadata['owner'] = asset['owner__username']
-        self.metadata['date_created'] = asset['date_created']
-        self.metadata['date_modified'] = asset['date_modified']
+    def fetch_data(self, columns_as: str = 'name', answers_as: str = 'name') -> Union[pd.DataFrame, dict]:
+        '''
+        XXX TO DO'''
+        if columns_as not in ['name', 'label']:
+            raise ValueError(
+                "The accepted values for the attribute 'columns_as' are 'name' or 'label'.")
 
-        self.__url_structure = asset['url']
-        self.__url_data = asset['data']
-        self.__base_url = '/'.join(asset['downloads']
-                                   [0]['url'].split('/')[:-1])
+        if answers_as not in ['name', 'label']:
+            raise ValueError(
+                "The accepted values for the attribute 'answers_as' are 'name' or 'label'.")
 
-    def _fetch_structure(self):
+        self.__columns_as = columns_as
+
+        self._get_questions()
+
+        # Fetch the data
+        res = requests.get(url=self.__url_data, headers=self.headers)
+
+        # If error while fetching the data, return an empty DF
+        if res.status_code != 200:
+            return pd.DataFrame()
+
+        data = res.json()['results']
+
+        self.data = pd.DataFrame(data)
+
+        # Add the groups name as prefix to the columns name
+        # if there are any group
+        self._rename_columns(self.data, 'name', 'name_with_prefix')
+
+        self.has_repeats = False
+
+        self._extract_repeats(data)
+
+        # If the form has at least one repeat group
+        if self.has_repeats:
+
+            # Add a column '_index' that can be used to join with the parent DF
+            # with the children DFs (which have the column '_parent_index')
+            self.data['_index'] = self.data.index + 1
+
+            # Move column '_index' to the first position
+            col_idx_parent = self.data.pop('_index')
+            self.data.insert(0, col_idx_parent.name, col_idx_parent)
+
+            # In the parent DF delete the columns that contain the repeat groups
+
+            # In the API there is a column with the same name as the name of
+            # the repeat group + the suffix '_count' just before the repeat group.
+            # We can delete it
+            repeats_count = [f'{c}_count' for c in self.repeats.keys()]
+            to_delete = list(self.repeats.keys()) + repeats_count
+            self.data.drop(columns=to_delete, inplace=True)
+
+        if columns_as == 'label':
+            self._rename_columns(self.data, 'name_with_prefix', 'label')
+            # if self.has_repeats:
+            #     for repeat_name, repeat_data in self.repeats.items():
+            #         print(repeat_data.columns)
+            #         self._rename_columns(
+            #             repeat_data, 'name_with_prefix', 'label')
+            #         print(repeat_data.columns)
+
+        self._split_gps_coords()
+
+        self._remove_metadata()
+
+    def _fetch_asset(self):
         res = requests.get(
-            url=self.__url_structure, headers=self.headers)
+            url=self.__url_asset, headers=self.headers)
         self.__content = res.json()['content']
 
     def _get_survey(self) -> None:
         '''Go through all the elements of the survey and build the root structure (and the structure
-        of the repeat groups if any) has a list of `Question` objects. Each `Question` object has a name
-        and a label so it's possible to display the data using any of the two'''
+        of the repeat groups if any) as a list of `Question` objects. Each `Question` object has a name
+        and a label so it's possible to display the data using any of the two.'''
 
         if not self.__content:
-            self._fetch_structure()
+            self._fetch_asset()
 
         survey = self.__content['survey']
 
@@ -133,72 +189,16 @@ class koboForm:
                     if q.type == 'select_one' or q.type == 'select_multiple':
                         q.choices = formatted_choices[q.select_from_list_name]
 
-    # def fetch_data(self, columns_as: str = 'name', answers_as: str = 'name') -> Union[pd.DataFrame, dict]:
-    #     '''
-    #     XXX TO DO'''
-    #     if columns_as not in ['name', 'label']:
-    #         raise ValueError(
-    #             "The accepted values for the attribute 'columns_as' are 'name' or 'label'.")
+    def _extract_from_asset(self, asset: dict) -> None:
+        self.metadata['name'] = asset['name']
+        self.metadata['owner'] = asset['owner__username']
+        self.metadata['date_created'] = asset['date_created']
+        self.metadata['date_modified'] = asset['date_modified']
 
-    #     if answers_as not in ['name', 'label']:
-    #         raise ValueError(
-    #             "The accepted values for the attribute 'answers_as' are 'name' or 'label'.")
-
-    #     self.__columns_as = columns_as
-
-    #     self._get_questions()
-
-    #     # Fetch the data
-    #     res = requests.get(url=self.__url_data, headers=self.headers)
-
-    #     # If error while fetching the data, return an empty DF
-    #     if res.status_code != 200:
-    #         return pd.DataFrame()
-
-    #     data = res.json()['results']
-
-    #     self.data = pd.DataFrame(data)
-
-    #     # Add the groups name as prefix to the columns name
-    #     # if there are any group
-    #     self._rename_columns(self.data, 'name', 'name_with_prefix')
-
-    #     self.has_repeats = False
-
-    #     self._extract_repeats(data)
-
-    #     # If the form has at least one repeat group
-    #     if self.has_repeats:
-
-    #         # Add a column '_index' that can be used to join with the parent DF
-    #         # with the children DFs (which have the column '_parent_index')
-    #         self.data['_index'] = self.data.index + 1
-
-    #         # Move column '_index' to the first position
-    #         col_idx_parent = self.data.pop('_index')
-    #         self.data.insert(0, col_idx_parent.name, col_idx_parent)
-
-    #         # In the parent DF delete the columns that contain the repeat groups
-
-    #         # In the API there is a column with the same name as the name of
-    #         # the repeat group + the suffix '_count' just before the repeat group.
-    #         # We can delete it
-    #         repeats_count = [f'{c}_count' for c in self.repeats.keys()]
-    #         to_delete = list(self.repeats.keys()) + repeats_count
-    #         self.data.drop(columns=to_delete, inplace=True)
-
-    #     if columns_as == 'label':
-    #         self._rename_columns(self.data, 'name_with_prefix', 'label')
-    #         # if self.has_repeats:
-    #         #     for repeat_name, repeat_data in self.repeats.items():
-    #         #         print(repeat_data.columns)
-    #         #         self._rename_columns(
-    #         #             repeat_data, 'name_with_prefix', 'label')
-    #         #         print(repeat_data.columns)
-
-    #     self._split_gps_coords()
-
-    #     self._remove_metadata()
+        self.__url_asset = asset['url']
+        self.__url_data = asset['data']
+        self.__base_url = '/'.join(asset['downloads']
+                                   [0]['url'].split('/')[:-1])
 
     def _rename_columns(self, df, old, new):
         dict_rename = {}
