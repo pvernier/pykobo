@@ -28,8 +28,8 @@ class Question:
         self.name = name
         self.type = type
         self.label = label
-        self.name_with_prefix = None
-        self.label_with_prefix = None
+        self.group_name = None
+        self.group_label = None
 
     def __repr__(self):
         return f"Question('{self.index}, {self.name}, {self.type}, {self.label}')"
