@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 import numpy as np
 
-from .types import Group, Question, Repeat
+from .types import Question
 
 
 class Form:
