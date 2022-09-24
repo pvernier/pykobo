@@ -16,28 +16,21 @@ class KoboForm:
         self.geo = False
         self.has_repeats = False
         self.repeats = {}
-        self.__columns_as = None
-        self.root_structure = []
-        self.repeats_structure = {}
+        self.__root_structure = []
+        self.__repeats_structure = {}
         self.__content = None
+        self.__columns_as = 'name'
+        self.__choices_as = 'name'
 
     def __repr__(self):
         return f"KoboForm('{self.uid}')"
 
-    def fetch_data(self, columns_as: str = 'name', answers_as: str = 'name') -> Union[pd.DataFrame, dict]:
-        '''
-        XXX TO DO'''
-        if columns_as not in ['name', 'label']:
-            raise ValueError(
-                "The accepted values for the attribute 'columns_as' are 'name' or 'label'.")
+    def fetch_data(self) -> Union[pd.DataFrame, dict]:
+        '''Fetch the form's data and store them as a Pandas DF in the attribute `data`.
+        If the form has repeat groups, extract them as separate DFs'''
 
-        if answers_as not in ['name', 'label']:
-            raise ValueError(
-                "The accepted values for the attribute 'answers_as' are 'name' or 'label'.")
-
-        self.__columns_as = columns_as
-
-        self._get_questions()
+        self._get_survey()
+        self._get_choices()
 
         # Fetch the data
         res = requests.get(url=self.__url_data, headers=self.headers)
@@ -50,16 +43,18 @@ class KoboForm:
 
         self.data = pd.DataFrame(data)
 
-        # Add the groups name as prefix to the columns name
-        # if there are any group
-        self._rename_columns(self.data, 'name', 'name_with_prefix')
+        # Rename columns to remove the prefix composed of the groups in which
+        # the question is.
+        __dict_rename = {}
+        for c in self.data.columns:
+            __dict_rename[c] = c.split('/')[-1]
 
-        self.has_repeats = False
-
-        self._extract_repeats(data)
+        self.data.rename(columns=__dict_rename, inplace=True)
 
         # If the form has at least one repeat group
         if self.has_repeats:
+
+            self._extract_repeats(data)
 
             # Add a column '_index' that can be used to join with the parent DF
             # with the children DFs (which have the column '_parent_index')
@@ -70,26 +65,16 @@ class KoboForm:
             self.data.insert(0, col_idx_parent.name, col_idx_parent)
 
             # In the parent DF delete the columns that contain the repeat groups
-
             # In the API there is a column with the same name as the name of
             # the repeat group + the suffix '_count' just before the repeat group.
             # We can delete it
             repeats_count = [f'{c}_count' for c in self.repeats.keys()]
             to_delete = list(self.repeats.keys()) + repeats_count
+
             self.data.drop(columns=to_delete, inplace=True)
 
-        if columns_as == 'label':
-            self._rename_columns(self.data, 'name_with_prefix', 'label')
-            # if self.has_repeats:
-            #     for repeat_name, repeat_data in self.repeats.items():
-            #         print(repeat_data.columns)
-            #         self._rename_columns(
-            #             repeat_data, 'name_with_prefix', 'label')
-            #         print(repeat_data.columns)
-
-        self._split_gps_coords()
-
-        self._remove_metadata()
+            if self.has_geo:
+                self._split_gps_coords()
 
     def _fetch_asset(self):
         res = requests.get(
@@ -129,7 +114,7 @@ class KoboForm:
 
                 in_repeat = True
                 self.has_repeats = True
-                self.repeats_structure[repeat_name] = []
+                self.__repeats_structure[repeat_name] = []
 
             if field['type'] == 'end_group':
                 group_name = None
@@ -163,9 +148,9 @@ class KoboForm:
                     self.geo = q
 
                 if in_repeat:
-                    self.repeats_structure[repeat_name].append(q)
+                    self.__repeats_structure[repeat_name].append(q)
                 else:
-                    self.root_structure.append(q)
+                    self.__root_structure.append(q)
 
     def _get_choices(self):
         '''For all the questions of type 'select_one' or 'select_multiple' assign their corresponding choices.
@@ -179,12 +164,12 @@ class KoboForm:
             formatted_choices[choice['list_name']].append(
                 {'name': choice['name'], 'label': choice['label'][0]})
 
-        for q in self.root_structure:
+        for q in self.__root_structure:
             if q.type == 'select_one' or q.type == 'select_multiple':
                 q.choices = formatted_choices[q.select_from_list_name]
 
         if self.has_repeats:
-            for k, repeat in self.repeats_structure.items():
+            for k, repeat in self.__repeats_structure.items():
                 for q in repeat:
                     if q.type == 'select_one' or q.type == 'select_multiple':
                         q.choices = formatted_choices[q.select_from_list_name]
@@ -206,54 +191,9 @@ class KoboForm:
             dict_rename[getattr(q, old)] = getattr(q, new)
         df.rename(columns=dict_rename, inplace=True)
 
-    # def _answers_as_label(self) -> None:
-
-    #     if not self.__content:
-    #         self._fetch_structure()
-
-    #     df = self.data
-
-    #     formatted_choices = {}
-    #     choices = self.__content['choices']
-    #     for choice in choices:
-    #         if choice['list_name'] not in formatted_choices:
-    #             formatted_choices[choice['list_name']] = []
-    #         formatted_choices[choice['list_name']].append(
-    #             {'name': choice['name'], 'label': choice['label'][0]})
-
-    #     for column in form_columns:
-    #         if column['select_one'] or column['select_multiple']:
-    #             if column['select_one']:
-    #                 uid_choice = column['select_one']
-
-    #                 for choice in formatted_choices[uid_choice]:
-    #                     df.loc[df[column['label']] == choice['name'],
-    #                            column['label']] = choice['label']
-
-    #             else:
-    #                 uid_choice = column['select_multiple']
-    #             column['value_labels'] = formatted_choices[uid_choice]
-
-    #     # For multiple values we have to loop again
-    #     for column in form_columns:
-    #         if column['select_multiple']:
-    #             unique_values = list(df[column['label']].unique())
-
-    #             for unique in unique_values:
-    #                 if pd.isna(unique):
-    #                     pass
-    #                 else:
-    #                     combinations = unique.split()
-    #                     label = [c['label']
-    #                              for c in column['value_labels'] if c['name'] in combinations]
-    #                     label_formatted = ', '.join(label)
-
-    #                     df.loc[df[column['label']] == unique,
-    #                            column['label']] = label_formatted
-
     def _extract_repeats(self, rows: list) -> None:
-        '''TO DO
-
+        '''Extract all the questions part of repeat groups into separate DFs
+         (on eper repat group).
         '_parent_index' is the column name used in Kobo in the child table
         when downloading the data, that allow to join the data with the parent table
         '''
@@ -261,27 +201,26 @@ class KoboForm:
         for idx_parent, row in enumerate(rows):
             for column, value in row.items():
                 if not column.startswith('_') and type(value) == list:
-                    if column not in repeats:
-                        repeats[column] = []
+                    repeat_name = column.split('/')[-1]
+                    if repeat_name not in repeats:
+                        repeats[repeat_name] = []
                     for child in value:
                         child['_parent_index'] = idx_parent + 1
-                    repeats[column] = repeats[column] + value
+                    repeats[repeat_name] = repeats[repeat_name] + value
 
-        if repeats:
-            for repeat_name, repeat_data in repeats.items():
-                repeats[repeat_name] = pd.DataFrame(repeat_data)
+        for repeat_name, repeat_data in repeats.items():
+            repeats[repeat_name] = pd.DataFrame(repeat_data)
 
-                # In the repeat groups the columns names have the
-                # name of their repeat group has a prefix.
-                # This is not necessary, we remove the prefix
-                dict_rename = {}
-                for c in repeats[repeat_name].columns:
-                    dict_rename[c] = c.replace(f'{repeat_name}/', '')
-                repeats[repeat_name].rename(columns=dict_rename, inplace=True)
+            # If columns have a prefix composed of all their groups,
+            # remove them
+            dict_rename = {}
+            for c in repeats[repeat_name].columns:
+                dict_rename[c] = c.split('/')[-1]
+            repeats[repeat_name].rename(columns=dict_rename, inplace=True)
 
-                # Move column "_parent_index" to the first position
-                col_idx_join = repeats[repeat_name].pop('_parent_index')
-                repeats[repeat_name].insert(0, col_idx_join.name, col_idx_join)
+            # Move column "_parent_index" to the first position
+            col_idx_join = repeats[repeat_name].pop('_parent_index')
+            repeats[repeat_name].insert(0, col_idx_join.name, col_idx_join)
 
             self.has_repeats = True
             self.repeats = repeats
@@ -330,12 +269,16 @@ class KoboForm:
 
         geo_column = getattr(self.geo, self.__columns_as)
 
+        base_geo_columns = ['latitude', 'longitude', 'altitude', 'precision']
+
+        new_geo_columns = [f'_{geo_column}_{c}' for c in base_geo_columns]
+
         if geo_column in self.data.columns:
 
-            self.data[['latitude', 'longitude', 'altitude', 'gps_precision']
+            self.data[new_geo_columns
                       ] = self.data[geo_column].str.split(' ', expand=True)
 
-            self.data.drop(geo_column, axis=1, inplace=True)
+            # self.data.drop(geo_column, axis=1, inplace=True)
 
     def download_form(self, format: str) -> None:
         '''Given the uid of a form and a format ('xls' or 'xml')
