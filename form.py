@@ -76,6 +76,9 @@ class KoboForm:
             if self.has_geo:
                 self._split_gps_coords()
 
+    def display(self, columns_as: str = 'name', choices_as: str = 'name') -> None:
+        pass
+
     def _fetch_asset(self):
         res = requests.get(
             url=self.__url_asset, headers=self.headers)
