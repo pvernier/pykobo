@@ -57,18 +57,14 @@ class KoboForm:
 
         self.data.rename(columns=__dict_rename, inplace=True)
 
+        # Add a column '_index' that can be used to join the parent DF
+        # with the children DFs (which have the column '_parent_index')
+        self.data['_index'] = self.data.index + 1
+
         # If the form has at least one repeat group
         if self.has_repeats:
 
             self._extract_repeats(data)
-
-            # Add a column '_index' that can be used to join with the parent DF
-            # with the children DFs (which have the column '_parent_index')
-            self.data['_index'] = self.data.index + 1
-
-            # Move column '_index' to the first position
-            # col_idx_parent = self.data.pop('_index')
-            # self.data.insert(0, col_idx_parent.name, col_idx_parent)
 
             # In the parent DF delete the columns that contain the repeat groups
             # In the API there is a column with the same name as the name of
@@ -359,10 +355,6 @@ class KoboForm:
             for c in repeats[repeat_name].columns:
                 dict_rename[c] = c.split('/')[-1]
             repeats[repeat_name].rename(columns=dict_rename, inplace=True)
-
-            # Move column "_parent_index" to the first position
-            # col_idx_join = repeats[repeat_name].pop('_parent_index')
-            # repeats[repeat_name].insert(0, col_idx_join.name, col_idx_join)
 
             self.has_repeats = True
             self.repeats = repeats
