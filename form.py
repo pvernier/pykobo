@@ -23,6 +23,8 @@ class KoboForm:
         self.__columns_as = 'name'
         self.__choices_as = 'name'
         self.naming_conflicts = None
+        self.separator = '|'
+        self.__initial_separator = ' '
 
     def __repr__(self):
         return f"KoboForm('{self.uid}')"
@@ -110,10 +112,21 @@ class KoboForm:
                 columns_ordered = [
                     q.name for q in self.__repeats_structure[k]['columns']]
 
-                # Move the column'_parent_index' back  to the first position
+                # The column'_parent_index' will be in the last position
                 columns_ordered.append('_parent_index')
 
                 self.repeats[k] = self.repeats[k][columns_ordered]
+
+        # We need to run `_change_choices` here in order to format the multiple choices
+        # so that it's possible to go back and forth between name and label for the choices
+        # In the Kobo API, multiple choices are seprated by ' '. We replace ' ' with self.separator
+        self._change_choices(
+            self.data, self.__root_structure, self.__choices_as)
+        if self.has_repeats:
+            for k, v in self.repeats.items():
+                self._change_choices(
+                    v, self.__repeats_structure[k]['columns'], self.__choices_as)
+        self.__initial_separator = self.separator
 
     def display(self, columns_as: str = 'name', choices_as: str = 'name') -> None:
         '''Update the DatFrames containing the data by using names or labels for
@@ -134,7 +147,8 @@ class KoboForm:
 
         # Change the choices names
         if self.__choices_as != choices_as:
-            self._change_choices(self.data, self.__root_structure, choices_as)
+            self._change_choices(
+                self.data, self.__root_structure, choices_as)
             if self.has_repeats:
                 for k, v in self.repeats.items():
                     self._change_choices(
@@ -269,8 +283,7 @@ class KoboForm:
                     df.loc[df[column] == choice[self.__choices_as],
                            column] = choice[choices_as]
 
-            # Multiple values
-            # XXX Doesn't work when goin back and forth between names and labels
+            # Multiple choices
             if q.type == 'select_multiple':
                 column = getattr(q, self.__columns_as)
                 unique_values = list(df[column].unique())
@@ -279,10 +292,11 @@ class KoboForm:
                     if pd.isna(unique):
                         pass
                     else:
-                        combinations = unique.split()
+                        combinations = unique.split(self.__initial_separator)
                         new_choices = [c[choices_as]
                                        for c in q.choices if c[self.__choices_as] in combinations]
-                        new_choices_formatted = ', '.join(new_choices)
+                        new_choices_formatted = f'{self.separator}'.join(
+                            new_choices)
 
                         df.loc[df[column] == unique,
                                column] = new_choices_formatted
