@@ -18,9 +18,11 @@ class KoboForm:
         self.repeats = {}
         self.__root_structure = []
         self.__repeats_structure = {}
+        self.__asset = None
         self.__content = None
         self.__columns_as = 'name'
         self.__choices_as = 'name'
+        self.naming_conflicts = None
 
     def __repr__(self):
         return f"KoboForm('{self.uid}')"
@@ -63,8 +65,8 @@ class KoboForm:
             self.data['_index'] = self.data.index + 1
 
             # Move column '_index' to the first position
-            col_idx_parent = self.data.pop('_index')
-            self.data.insert(0, col_idx_parent.name, col_idx_parent)
+            # col_idx_parent = self.data.pop('_index')
+            # self.data.insert(0, col_idx_parent.name, col_idx_parent)
 
             # In the parent DF delete the columns that contain the repeat groups
             # In the API there is a column with the same name as the name of
@@ -83,12 +85,35 @@ class KoboForm:
                 self.data[q.name] = np.nan
         if self.has_repeats:
             for k, v in self.repeats.items():
-                for q.name in self.__repeats_structure[k]['columns']:
+                for q in self.__repeats_structure[k]['columns']:
                     if q.name not in v.columns:
                         v[q.name] = np.nan
 
         if self.has_geo:
             self._split_gps_coords()
+
+        # At this point we don't add or delete columns any more
+        # so we can reorder the columns as they are in the API
+
+        # the columns that are in the DF but not in the structure
+        # will be moved to the end
+        last_columns = [c for c in self.data.columns if c not in [
+            q.name for q in self.__root_structure]]
+
+        columns_ordered = [
+            q.name for q in self.__root_structure] + last_columns
+
+        self.data = self.data[columns_ordered]
+
+        if self.has_repeats:
+            for k, v in self.repeats.items():
+                columns_ordered = [
+                    q.name for q in self.__repeats_structure[k]['columns']]
+
+                # Move the column'_parent_index' back  to the first position
+                columns_ordered.append('_parent_index')
+
+                self.repeats[k] = self.repeats[k][columns_ordered]
 
     def display(self, columns_as: str = 'name', choices_as: str = 'name') -> None:
         '''Update the DatFrames containing the data by using names or labels for
@@ -121,8 +146,11 @@ class KoboForm:
         of the repeat groups if any) as a list of `Question` objects. Each `Question` object has a name
         and a label so it's possible to display the data using any of the two.'''
 
-        if not self.__content:
+        if not self.__asset:
             self._fetch_asset()
+
+        if 'naming_conflicts' in self.__asset['summary']:
+            self.naming_conflicts = self.__asset['summary']['naming_conflicts']
 
         survey = self.__content['survey']
 
@@ -164,11 +192,22 @@ class KoboForm:
                 repeat_label = None
 
             if field['type'] != 'begin_group' and field['type'] != 'begin_repeat' and field['type'] != 'end_group' and field['type'] != 'end_repeat':
+
                 name_q = field['name']
                 if 'label' in field:
                     label_q = field['label'][0]
                 else:
                     label_q = name_q
+
+                if self.naming_conflicts and name_q in self.naming_conflicts and field['type'] not in ['start',
+                                                                                                       'end',
+                                                                                                       'today',
+                                                                                                       'username',
+                                                                                                       'deviceid',
+                                                                                                       'phonenumber',
+                                                                                                       'calculate']:
+                    name_q = f'{name_q}_001'
+
                 q = Question(name_q, field['type'], label_q)
 
                 if field['type'] == 'select_one' or field['type'] == 'select_multiple':
@@ -185,7 +224,7 @@ class KoboForm:
                     # Identify the geopoint if any
                     if field['type'] == 'geopoint':
                         self.__repeats_structure[repeat_name]['has_geo'] = True
-                        self.geo.append(q)
+                        self.__repeats_structure[repeat_name]['geo'].append(q)
                 else:
                     self.__root_structure.append(q)
                     # Identify the geopoint if any
@@ -231,6 +270,7 @@ class KoboForm:
                            column] = choice[choices_as]
 
             # Multiple values
+            # XXX Doesn't work when goin back and forth between names and labels
             if q.type == 'select_multiple':
                 column = getattr(q, self.__columns_as)
                 unique_values = list(df[column].unique())
@@ -250,6 +290,7 @@ class KoboForm:
     def _fetch_asset(self):
         res = requests.get(
             url=self.__url_asset, headers=self.headers)
+        self.__asset = res.json()
         self.__content = res.json()['content']
 
     def _extract_from_asset(self, asset: dict) -> None:
@@ -281,7 +322,6 @@ class KoboForm:
 
     def _extract_repeats(self, rows: list) -> None:
         '''Extract all the questions part of repeat groups into separate DFs
-         (on eper repat group).
         '_parent_index' is the column name used in Kobo in the child table
         when downloading the data, that allow to join the data with the parent table
         '''
@@ -307,8 +347,8 @@ class KoboForm:
             repeats[repeat_name].rename(columns=dict_rename, inplace=True)
 
             # Move column "_parent_index" to the first position
-            col_idx_join = repeats[repeat_name].pop('_parent_index')
-            repeats[repeat_name].insert(0, col_idx_join.name, col_idx_join)
+            # col_idx_join = repeats[repeat_name].pop('_parent_index')
+            # repeats[repeat_name].insert(0, col_idx_join.name, col_idx_join)
 
             self.has_repeats = True
             self.repeats = repeats
@@ -317,10 +357,10 @@ class KoboForm:
         '''Remove the columns in the list `columns` if they are in the
         main `self.data` (before extracting the repeats)'''
 
-        columns = ['_version_', 'uuid', 'instanceID', '_xform_id_string',
-                   '_attachments', 'deprecatedID', '_geolocation']
+        columns = ['_version_', 'formhub/uuid', 'meta/instanceID', '_xform_id_string',
+                   '_attachments', 'meta/deprecatedID', '_geolocation']
 
-        # We only keep the columns that are in the DataFrame
+        # We only try to delete the columns that are in the DataFrame
         to_delete = [
             c for c in columns if c in self.data.columns]
 
@@ -351,12 +391,13 @@ class KoboForm:
         base_geo_columns = ['latitude', 'longitude', 'altitude', 'precision']
 
         for g in self.geo:
+            index_geo = self.__root_structure.index(g)
             new_geo_names = [f'_{g.name}_{c}' for c in base_geo_columns]
             new_geo_labels = [f'_{g.label}_{c}' for c in base_geo_columns]
 
             for idx, c in enumerate(new_geo_names):
                 q = Question(c, 'geo', new_geo_labels[idx])
-                self.__root_structure.append(q)
+                self.__root_structure.insert(index_geo + idx + 1, q)
 
             self.data[new_geo_names] = self.data[g.name].str.split(
                 ' ', expand=True)
@@ -366,6 +407,7 @@ class KoboForm:
             for repeat_name, repeat in self.__repeats_structure.items():
                 if repeat['has_geo']:
                     for g in repeat['geo']:
+                        index_geo = repeat['columns'].index(g)
                         new_geo_names = [
                             f'_{g.name}_{c}' for c in base_geo_columns]
                         new_geo_labels = [
@@ -373,7 +415,7 @@ class KoboForm:
 
                         for idx, c in enumerate(new_geo_names):
                             q = Question(c, 'geo', new_geo_labels[idx])
-                            repeat['columns'].append(q)
+                            repeat['columns'].append(index_geo + idx + 1, q)
 
                         self.data[new_geo_names] = self.repeats[repeat_name][g.name].str.split(
                             ' ', expand=True)
