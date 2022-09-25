@@ -43,8 +43,10 @@ class KoboForm:
 
         self.data = pd.DataFrame(data)
 
-        # Rename columns to remove the prefix composed of the groups in which
-        # the question is.
+        self._remove_unused_columns()
+
+        # For columns containing the group(s) they belong to in their name, remove it to only
+        # keep the name of the column
         __dict_rename = {}
         for c in self.data.columns:
             __dict_rename[c] = c.split('/')[-1]
@@ -73,18 +75,32 @@ class KoboForm:
 
             self.data.drop(columns=to_delete, inplace=True)
 
-            if self.has_geo:
-                self._split_gps_coords()
+        # The JSON object returned by the API containing the form data doesn't
+        # have properties for empyty columns. So, here all empty columns are missing.
+        # We need to add them
+        for q in self.__root_structure:
+            if q.name not in self.data.columns:
+                self.data[q.name] = np.nan
+        if self.has_repeats:
+            for k, v in self.repeats.items():
+                for q.name in self.__repeats_structure[k]:
+                    if q.name not in v.columns:
+                        v[q.name] = np.nan
+
+        if self.has_geo:
+            self._split_gps_coords()
 
     def display(self, columns_as: str = 'name', choices_as: str = 'name') -> None:
-        '''TO DO'''
+        '''Update the DatFrames containing the data by using names or labels for
+        the columns and/or the choices based on the values of the parameters `columns_as`
+        and `choices_as`.'''
         if columns_as not in ['name', 'label']:
             raise ValueError(
-                f"'{columns_as}' is not an accepted value for the attribute 'columns_as'. Accepted values are 'name' or 'label'.")
+                f"'{columns_as}' is not an accepted value for the parameter 'columns_as'. Accepted values are 'name' or 'label'.")
 
         if choices_as not in ['name', 'label']:
             raise ValueError(
-                f"'{choices_as}' is not an accepted value for the attribute 'choices_as'. Accepted values are 'name' or 'label'.")
+                f"'{choices_as}' is not an accepted value for the parameter 'choices_as'. Accepted values are 'name' or 'label'.")
 
         # Change the columns names
         if self.__columns_as != columns_as:
@@ -99,37 +115,6 @@ class KoboForm:
                     self._change_choices(
                         v, self.__repeats_structure[k], choices_as)
             self.__choices_as = choices_as
-
-    def _change_choices(self, df: pd.DataFrame, structure: list, choices_as: str) -> None:
-        ''''''
-        for q in structure:
-            if q.type == 'select_one':
-                column = getattr(q, self.__columns_as)
-                for choice in q.choices:
-                    df.loc[df[column] == choice[self.__choices_as],
-                           column] = choice[choices_as]
-
-            # Multiple values
-            if q.type == 'select_multiple':
-                column = getattr(q, self.__columns_as)
-                unique_values = list(df[column].unique())
-
-                for unique in unique_values:
-                    if pd.isna(unique):
-                        pass
-                    else:
-                        combinations = unique.split()
-                        new_choices = [c[choices_as]
-                                       for c in q.choices if c[self.__choices_as] in combinations]
-                        new_choices_formatted = ', '.join(new_choices)
-
-                        df.loc[df[column] == unique,
-                               column] = new_choices_formatted
-
-    def _fetch_asset(self):
-        res = requests.get(
-            url=self.__url_asset, headers=self.headers)
-        self.__content = res.json()['content']
 
     def _get_survey(self) -> None:
         '''Go through all the elements of the survey and build the root structure (and the structure
@@ -229,6 +214,38 @@ class KoboForm:
                     if q.type == 'select_one' or q.type == 'select_multiple':
                         q.choices = formatted_choices[q.select_from_list_name]
 
+    def _change_choices(self, df: pd.DataFrame, structure: list, choices_as: str) -> None:
+        '''Change the choices for the columns of type 'select_one' and 'select_multiple'
+        from name to label and vice versa.'''
+        for q in structure:
+            if q.type == 'select_one':
+                column = getattr(q, self.__columns_as)
+                for choice in q.choices:
+                    df.loc[df[column] == choice[self.__choices_as],
+                           column] = choice[choices_as]
+
+            # Multiple values
+            if q.type == 'select_multiple':
+                column = getattr(q, self.__columns_as)
+                unique_values = list(df[column].unique())
+
+                for unique in unique_values:
+                    if pd.isna(unique):
+                        pass
+                    else:
+                        combinations = unique.split()
+                        new_choices = [c[choices_as]
+                                       for c in q.choices if c[self.__choices_as] in combinations]
+                        new_choices_formatted = ', '.join(new_choices)
+
+                        df.loc[df[column] == unique,
+                               column] = new_choices_formatted
+
+    def _fetch_asset(self):
+        res = requests.get(
+            url=self.__url_asset, headers=self.headers)
+        self.__content = res.json()['content']
+
     def _extract_from_asset(self, asset: dict) -> None:
         self.metadata['name'] = asset['name']
         self.metadata['owner'] = asset['owner__username']
@@ -241,7 +258,7 @@ class KoboForm:
                                    [0]['url'].split('/')[:-1])
 
     def _rename_columns(self, old, new):
-        ''''''
+        '''Used to change the columns names from name to label and vice versa'''
         dict_rename = {}
         for q in self.__root_structure:
             dict_rename[getattr(q, old)] = getattr(q, new)
@@ -290,16 +307,19 @@ class KoboForm:
             self.has_repeats = True
             self.repeats = repeats
 
-    def _remove_metadata(self) -> pd.DataFrame:
-        '''Remove the metadata columns (meaning the ones starting with an '_',
-        plus the 4 columns: 'formhub/uuid', 'meta/instanceID', 'start', 'end') 
-        of the DataFrame'''
+    def _remove_unused_columns(self) -> None:
+        '''Remove the columns in the list `columns` if they are in the
+        main `self.data` (before extracting the repeats)'''
 
-        self._delete_columns_in_df(self.data)
+        columns = ['_version_', 'uuid', 'instanceID', '_xform_id_string',
+                   '_attachments', 'deprecatedID', '_geolocation']
 
-        if self.has_repeats:
-            for k, v in self.repeats.items():
-                self._delete_columns_in_df(v)
+        # We only keep the columns that are in the DataFrame
+        to_delete = [
+            c for c in columns if c in self.data.columns]
+
+        if len(to_delete) > 0:
+            self.data.drop(to_delete, axis=1, inplace=True)
 
     def _rename_columns_labels_duplicates(self, structure: list) -> None:
         '''Identify the duplicates among the labels of all columns in ``structure`.
@@ -316,30 +336,6 @@ class KoboForm:
             if q.label in duplicates_count:
                 duplicates_count[q.label] += 1
                 q.label = f'{q.label} ({duplicates_count[q.label]})'
-
-    def _delete_columns_in_df(self, df: pd.DataFrame) -> None:
-
-        metadata_columns = [
-            column for column in df.columns if column.startswith('_')]
-
-        # If we have repeat groups, keep the columns that make the join
-        # possible between the parent and children DFs
-        if self.has_repeats:
-            if '_index' in df.columns:
-                metadata_columns.remove('_index')
-            if '_parent_index' in df.columns:
-                metadata_columns.remove('_parent_index')
-
-        others = ['formhub/uuid', 'meta/instanceID', 'start',
-                  'end', 'today',  'username', 'deviceid']
-
-        # We only keep the columns that are in the DataFrame
-        others = [
-            o for o in others if o in df.columns]
-
-        metadata_columns = metadata_columns + others
-
-        df.drop(metadata_columns, axis=1, inplace=True)
 
     def _split_gps_coords(self) -> None:
         '''Split the column of type 'geopoint' into 4 columns
