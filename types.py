@@ -2,8 +2,7 @@ from typing import Union
 
 
 class Question:
-    def __init__(self, index: str, name: str, type: str, label: str = None) -> None:
-        self.index = index
+    def __init__(self, name: str, type: str, label: str = None) -> None:
         self.name = name
         self.type = type
         self.label = label
@@ -15,4 +14,4 @@ class Question:
         self.choices = None
 
     def __repr__(self):
-        return f"Question('{self.index}, {self.name}, {self.type}, {self.label}')"
+        return f"Question('{self.name}, {self.type}, {self.label}')"

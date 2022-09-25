@@ -13,7 +13,7 @@ class KoboForm:
         self.metadata = {}
         self.data = None
         self.has_geo = False
-        self.geo = False
+        self.geo = []
         self.has_repeats = False
         self.repeats = {}
         self.__root_structure = []
@@ -83,7 +83,7 @@ class KoboForm:
                 self.data[q.name] = np.nan
         if self.has_repeats:
             for k, v in self.repeats.items():
-                for q.name in self.__repeats_structure[k]:
+                for q.name in self.__repeats_structure[k]['columns']:
                     if q.name not in v.columns:
                         v[q.name] = np.nan
 
@@ -113,7 +113,7 @@ class KoboForm:
             if self.has_repeats:
                 for k, v in self.repeats.items():
                     self._change_choices(
-                        v, self.__repeats_structure[k], choices_as)
+                        v, self.__repeats_structure[k]['columns'], choices_as)
             self.__choices_as = choices_as
 
     def _get_survey(self) -> None:
@@ -132,7 +132,7 @@ class KoboForm:
         repeat_label = None
         in_repeat = False
 
-        for idx, field in enumerate(survey):
+        for field in survey:
 
             # Identify groups and repeats if any
             if field['type'] == 'begin_group':
@@ -149,7 +149,10 @@ class KoboForm:
 
                 in_repeat = True
                 self.has_repeats = True
-                self.__repeats_structure[repeat_name] = []
+                self.__repeats_structure[repeat_name] = {}
+                self.__repeats_structure[repeat_name]['columns'] = []
+                self.__repeats_structure[repeat_name]['has_geo'] = False
+                self.__repeats_structure[repeat_name]['geo'] = False
 
             if field['type'] == 'end_group':
                 group_name = None
@@ -166,7 +169,7 @@ class KoboForm:
                     label_q = field['label'][0]
                 else:
                     label_q = name_q
-                q = Question(idx, name_q, field['type'], label_q)
+                q = Question(name_q, field['type'], label_q)
 
                 if field['type'] == 'select_one' or field['type'] == 'select_multiple':
                     q.select_from_list_name = field['select_from_list_name']
@@ -177,20 +180,23 @@ class KoboForm:
                 q.repeat_name = repeat_name
                 q.repeat_label = repeat_label
 
-                # Identify the geopoint if any
-                if field['type'] == 'geopoint':
-                    self.has_geo = True
-                    self.geo = q
-
                 if in_repeat:
-                    self.__repeats_structure[repeat_name].append(q)
+                    self.__repeats_structure[repeat_name]['columns'].append(q)
+                    # Identify the geopoint if any
+                    if field['type'] == 'geopoint':
+                        self.__repeats_structure[repeat_name]['has_geo'] = True
+                        self.geo.append(q)
                 else:
                     self.__root_structure.append(q)
+                    # Identify the geopoint if any
+                    if field['type'] == 'geopoint':
+                        self.has_geo = True
+                        self.geo.append(q)
 
         self._rename_columns_labels_duplicates(self.__root_structure)
         if self.has_repeats:
-            for k, v in self.__repeats_structure.items():
-                self._rename_columns_labels_duplicates(v)
+            for k, repeat in self.__repeats_structure.items():
+                self._rename_columns_labels_duplicates(repeat['columns'])
 
     def _get_choices(self):
         '''For all the questions of type 'select_one' or 'select_multiple' assign their corresponding choices.
@@ -210,7 +216,7 @@ class KoboForm:
 
         if self.has_repeats:
             for k, repeat in self.__repeats_structure.items():
-                for q in repeat:
+                for q in repeat['columns']:
                     if q.type == 'select_one' or q.type == 'select_multiple':
                         q.choices = formatted_choices[q.select_from_list_name]
 
@@ -268,7 +274,7 @@ class KoboForm:
         if self.has_repeats:
             for k, repeat in self.__repeats_structure.items():
                 dict_rename = {}
-                for q in repeat:
+                for q in repeat['columns']:
                     dict_rename[getattr(q, old)] = getattr(q, new)
                 self.repeats[k].rename(
                     columns=dict_rename, inplace=True)
@@ -338,24 +344,39 @@ class KoboForm:
                 q.label = f'{q.label} ({duplicates_count[q.label]})'
 
     def _split_gps_coords(self) -> None:
-        '''Split the column of type 'geopoint' into 4 columns
+        '''Split the columns of type 'geopoint' into 4 new columns
         'latitude', 'longitude', 'altitude', 'gps_precision'
-        XXX It assumes this column is in the parent DF (self.data)
-        not in a repeat group. TO IMPROVE
         '''
-
-        geo_column = getattr(self.geo, self.__columns_as)
 
         base_geo_columns = ['latitude', 'longitude', 'altitude', 'precision']
 
-        new_geo_columns = [f'_{geo_column}_{c}' for c in base_geo_columns]
+        for g in self.geo:
+            new_geo_names = [f'_{g.name}_{c}' for c in base_geo_columns]
+            new_geo_labels = [f'_{g.label}_{c}' for c in base_geo_columns]
 
-        if geo_column in self.data.columns:
+            for idx, c in enumerate(new_geo_names):
+                q = Question(c, 'geo', new_geo_labels[idx])
+                self.__root_structure.append(q)
 
-            self.data[new_geo_columns
-                      ] = self.data[geo_column].str.split(' ', expand=True)
+            self.data[new_geo_names] = self.data[g.name].str.split(
+                ' ', expand=True)
 
-            # self.data.drop(geo_column, axis=1, inplace=True)
+        # XXX This has not been tested
+        if self.has_repeats:
+            for repeat_name, repeat in self.__repeats_structure.items():
+                if repeat['has_geo']:
+                    for g in repeat['geo']:
+                        new_geo_names = [
+                            f'_{g.name}_{c}' for c in base_geo_columns]
+                        new_geo_labels = [
+                            f'_{g.label}_{c}' for c in base_geo_columns]
+
+                        for idx, c in enumerate(new_geo_names):
+                            q = Question(c, 'geo', new_geo_labels[idx])
+                            repeat['columns'].append(q)
+
+                        self.data[new_geo_names] = self.repeats[repeat_name][g.name].str.split(
+                            ' ', expand=True)
 
     def download_form(self, format: str) -> None:
         '''Given the uid of a form and a format ('xls' or 'xml')
