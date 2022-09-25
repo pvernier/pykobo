@@ -77,7 +77,54 @@ class KoboForm:
                 self._split_gps_coords()
 
     def display(self, columns_as: str = 'name', choices_as: str = 'name') -> None:
-        pass
+        '''TO DO'''
+        if columns_as not in ['name', 'label']:
+            raise ValueError(
+                f"'{columns_as}' is not an accepted value for the attribute 'columns_as'. Accepted values are 'name' or 'label'.")
+
+        if choices_as not in ['name', 'label']:
+            raise ValueError(
+                f"'{choices_as}' is not an accepted value for the attribute 'choices_as'. Accepted values are 'name' or 'label'.")
+
+        # Change the columns names
+        if self.__columns_as != columns_as:
+            self._rename_columns(self.__columns_as, columns_as)
+            self.__columns_as = columns_as
+
+        # Change the choices names
+        if self.__choices_as != choices_as:
+            self._change_choices(self.data, self.__root_structure, choices_as)
+            if self.has_repeats:
+                for k, v in self.repeats.items():
+                    self._change_choices(
+                        v, self.__repeats_structure[k], choices_as)
+            self.__choices_as = choices_as
+
+    def _change_choices(self, df: pd.DataFrame, structure: list, choices_as: str) -> None:
+        ''''''
+        for q in structure:
+            if q.type == 'select_one':
+                column = getattr(q, self.__columns_as)
+                for choice in q.choices:
+                    df.loc[df[column] == choice[self.__choices_as],
+                           column] = choice[choices_as]
+
+            # Multiple values
+            if q.type == 'select_multiple':
+                column = getattr(q, self.__columns_as)
+                unique_values = list(df[column].unique())
+
+                for unique in unique_values:
+                    if pd.isna(unique):
+                        pass
+                    else:
+                        combinations = unique.split()
+                        new_choices = [c[choices_as]
+                                       for c in q.choices if c[self.__choices_as] in combinations]
+                        new_choices_formatted = ', '.join(new_choices)
+
+                        df.loc[df[column] == unique,
+                               column] = new_choices_formatted
 
     def _fetch_asset(self):
         res = requests.get(
@@ -155,6 +202,11 @@ class KoboForm:
                 else:
                     self.__root_structure.append(q)
 
+        self._rename_columns_labels_duplicates(self.__root_structure)
+        if self.has_repeats:
+            for k, v in self.__repeats_structure.items():
+                self._rename_columns_labels_duplicates(v)
+
     def _get_choices(self):
         '''For all the questions of type 'select_one' or 'select_multiple' assign their corresponding choices.
         Each choice has a name and label so it's possible to display the data using any of the two.'''
@@ -188,11 +240,21 @@ class KoboForm:
         self.__base_url = '/'.join(asset['downloads']
                                    [0]['url'].split('/')[:-1])
 
-    def _rename_columns(self, df, old, new):
+    def _rename_columns(self, old, new):
+        ''''''
         dict_rename = {}
-        for q in self.questions:
+        for q in self.__root_structure:
             dict_rename[getattr(q, old)] = getattr(q, new)
-        df.rename(columns=dict_rename, inplace=True)
+
+        self.data.rename(columns=dict_rename, inplace=True)
+
+        if self.has_repeats:
+            for k, repeat in self.__repeats_structure.items():
+                dict_rename = {}
+                for q in repeat:
+                    dict_rename[getattr(q, old)] = getattr(q, new)
+                self.repeats[k].rename(
+                    columns=dict_rename, inplace=True)
 
     def _extract_repeats(self, rows: list) -> None:
         '''Extract all the questions part of repeat groups into separate DFs
@@ -238,6 +300,22 @@ class KoboForm:
         if self.has_repeats:
             for k, v in self.repeats.items():
                 self._delete_columns_in_df(v)
+
+    def _rename_columns_labels_duplicates(self, structure: list) -> None:
+        '''Identify the duplicates among the labels of all columns in ``structure`.
+        In case of duplicates, rename the label by appending (x) at the end of the label.
+        'x' being the number of time the duplicate has been encountered
+        while going through all the columns.'''
+        all_labels = [q.label for q in structure]
+        duplicate_labels = [l for l in all_labels if all_labels.count(l) > 1]
+        duplicates_count = {}
+        for d in duplicate_labels:
+            duplicates_count[d] = 0
+
+        for q in structure:
+            if q.label in duplicates_count:
+                duplicates_count[q.label] += 1
+                q.label = f'{q.label} ({duplicates_count[q.label]})'
 
     def _delete_columns_in_df(self, df: pd.DataFrame) -> None:
 
