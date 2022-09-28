@@ -310,6 +310,7 @@ class KoboForm:
         self.metadata['date_modified'] = asset['date_modified']
         self.metadata['version_id'] = asset['version_id']
         self.metadata['has_deployment'] = asset['has_deployment']
+        self.metadata['geo'] = asset['summary']['geo']
 
         self.__url_asset = asset['url']
         self.__url_data = asset['data']
