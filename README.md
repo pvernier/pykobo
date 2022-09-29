@@ -27,6 +27,8 @@ For an identified user, pykobo can:
 
 ### How to start
 
+To get your API token, see [here](https://support.kobotoolbox.org/api.html#getting-your-api-token).
+
 ```python
 import pykobo
 
