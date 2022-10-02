@@ -19,6 +19,8 @@ For an identified user, pykobo can:
 
 ### How to start
 
+NB: The example below uses [kf.kobotoolbox.org](https://kf.kobotoolbox.org/) but pykobo also works with [kobo.humanitarianresponse.info](https://kobo.humanitarianresponse.info/) and any other Kobo server.
+
 To get your API token, see [here](https://support.kobotoolbox.org/api.html#getting-your-api-token).
 
 ```python
@@ -141,7 +143,9 @@ Index(['start', 'end', 'today', 'username', 'deviceid', 'phonenumber', 'date',
 
 ```python
 my_form.display(columns_as='label', choices_as='label')
+
 print(my_form.data.columns)
+
 Index(['start', 'end', 'today', 'username', 'deviceid', 'phonenumber',
        'Date of the survey', 'Health zone', 'Name of the village', 'team number',
        'Cluster number', 'Household number', 'GPS Coordinates',
