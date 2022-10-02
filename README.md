@@ -162,7 +162,7 @@ Index(['start', 'end', 'today', 'username', 'deviceid', 'phonenumber',
 
 # You can go back and forth between names and labels as much as you want 
 my_form.display(columns_as='label', choices_as='name')
-my_form.display(columns_as='label', choices_as='name')
+my_form.display(columns_as='name', choices_as='label')
 my_form.display(columns_as='name', choices_as='name')
 my_form.display(columns_as='label', choices_as='label')
 
