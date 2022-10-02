@@ -6,7 +6,7 @@ The form's data is returned as a pandas DataFrame making it easy to integrate in
 
 ## Functionalities
 For an identified user, pykobo can:
-* Get the list of forms and their metadata he has access to 
+* Get the list of forms he has access to 
 * Fetch the data of a form (with names or labels for the columns and choices) as a pandas DataFrame
 * Download a form in XLS or XML format
 
@@ -39,7 +39,7 @@ km = pykobo.Manager(url_api=URL_KOBO_API, token=MYTOKEN)
 my_forms = km.get_forms()
 
 ```
-This returns a Python a list of KoForm objetcs
+This returns a Python list of KoboForm objetcs
 
 ```python
 print(my_forms)
