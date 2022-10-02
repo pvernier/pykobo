@@ -2,7 +2,7 @@
 
 Pykobo is a Python module that fetches data from [Kobo](https://www.kobotoolbox.org/) forms via the [Kobo API](https://support.kobotoolbox.org/api.html).
 
-The form's data is returned as a [pandas](https://pandas.pydata.org/) DataFrame making it easy to integrate in your workflow for further cleaning, filtering, aggregatation, etc...  
+The data is returned as a [pandas](https://pandas.pydata.org/) DataFrame making it easy to integrate in your workflow for further cleaning, filtering, aggregatation, etc...  
 
 ## Functionalities
 Pykobo can:
