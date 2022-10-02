@@ -38,15 +38,3 @@ class Manager:
         form = [f for f in forms if f.uid == uid][0]
 
         return form
-
-    # def get_url_data_form(self, uid: str) -> str:
-    #     '''Given the uid of a form
-    #     returns the URL of the data in JSON'''
-
-    #     return f'{self.url_api}/assets/{uid}/data?format=json'
-
-    # def get_url_data_metadata(self, uid: str) -> str:
-    #     '''Given the uid of a form
-    #     returns the URL of the metadata in JSON'''
-
-    #     return f'{self.url_api}/assets/{uid}/?format=json'
