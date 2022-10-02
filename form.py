@@ -336,7 +336,7 @@ class KoboForm:
     def _extract_repeats(self, rows: list) -> None:
         '''Extract all the questions part of repeat groups into separate DFs
         '_parent_index' is the column name used in Kobo in the child table
-        when downloading the data, that allow to join the data with the parent table
+        when downloading the data, that allows to join the data with the parent table
         '''
         repeats = {}
         for idx_parent, row in enumerate(rows):
