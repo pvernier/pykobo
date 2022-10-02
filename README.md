@@ -249,4 +249,5 @@ Pykobo only reads and fetches data from Kobo forms. It doesn't update or delete 
 * Add method to download media files
 * Clean and document utility functions
 * Be more consistent and robust in case of errors
+* Calculate stats on forms time duration
 * Build Python package
