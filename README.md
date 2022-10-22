@@ -171,7 +171,7 @@ my_form.display(columns_as='label', choices_as='label')
 #### Note
 * For questions of type `select_multiple` the different answers are separated by a '|'.
 
-* If a form contains `n` columns with the same label, a suffix `(1)` to `(n)` will be added to each of the column.
+* If a form contains `n` columns with the same label, a suffix `(1)` to `(n)` will be added to each of the columns.
 
 ### Repeats
 
