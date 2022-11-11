@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "pykobo"
+version = "0.1.0"
+description = "A Python module to fetch data from the Kobo API"
+authors = ["pvernier <pvernier82@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "^1.5.1"
+requests = "^2.28.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+flake8 = "^5.0.4"
+black = "^22.10.0"
+isort = "^5.10.1"
+safety = "^2.3.1"
+bandit = "^1.7.4"
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
