@@ -1,6 +1,3 @@
-from typing import Union
-
-
 class Question:
     def __init__(self, name: str, type: str, label: str = None) -> None:
         self.name = name
