@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from .types import Question
+from .features import Question
 
 
 class KoboForm:
