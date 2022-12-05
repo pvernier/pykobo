@@ -1,3 +1,5 @@
+![PyPI](https://img.shields.io/pypi/v/pykobo)
+
 # pykobo
 
 Pykobo is a Python module that fetches data from [Kobo](https://www.kobotoolbox.org/) forms via the [Kobo API](https://support.kobotoolbox.org/api.html).
@@ -10,10 +12,11 @@ Pykobo can:
 * Fetch the data of a form (with names or labels for the columns and choices) as a pandas DataFrame
 * Download a form in XLS or XML format
 
-## Requirements
-* requests
-* pandas
-* numpy
+## Install
+
+```bash
+$ pip install pykobo
+```
 
 ## Examples
 
@@ -245,10 +248,14 @@ Pykobo has a bunch of utility methods that make easy to clean you data (not docu
 ## Note
 Pykobo only reads and fetches data from Kobo forms. It doesn't update or delete the forms and their data on the Kobo server.
 
+## Dependencies
+* requests
+* pandas
+* numpy
+
 ## TO DO
 * Add possibility to display group name as a prefix
 * Add method to download media files
 * Clean and document utility functions
 * Be more consistent and robust in case of errors
 * Calculate stats on forms time duration
-* Build Python package
