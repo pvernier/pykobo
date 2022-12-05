@@ -1,5 +1,8 @@
 [tool.poetry]
 name = "pykobo"
+packages = [
+    { include = "pykobo" },
+]
 version = "0.1.0"
 description = "A Python module to fetch data from the Kobo API"
 authors = ["pvernier <pvernier82@gmail.com>"]
