@@ -10,6 +10,7 @@ from .features import Question
 class KoboForm:
     def __init__(self, uid: str) -> None:
         self.uid = uid
+        self.headers = None
         self.metadata = {}
         self.data = None
         self.has_geo = False
@@ -34,7 +35,12 @@ class KoboForm:
         If the form has repeat groups, extract them as separate DFs"""
 
         self._get_survey()
-        self._get_choices()
+
+        # It's possible for a form to have no "choices" (corresponds to
+        # a XLSForm without a tab "choices"). In this case we don't call
+        # the method '_get_choices'
+        if "choices" in self.__content:
+            self._get_choices()
 
         # Fetch the data
         res = requests.get(url=self.__url_data, headers=self.headers)

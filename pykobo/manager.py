@@ -21,7 +21,17 @@ class Manager:
         if res.status_code != 200:
             return []
 
-        self._assets = res.json()["results"]
+        results = res.json()["results"]
+
+        # It seems that when uploading an XLSForm from the website to create
+        # a new form and there is an issue during the upload, the form
+        # will be visible in the API but not in the UI. In this case it will
+        # have the property "asset_type" set to "empty" instead of "survey"
+        # for a working form. We don't want to keep them so we filter them out.
+        # This issue seems to be very rare.
+        results = [r for r in results if r["asset_type"] != "empty"]
+
+        self._assets = results
 
         forms = []
         for form in self._assets:
