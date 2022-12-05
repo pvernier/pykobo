@@ -10,6 +10,7 @@ from .features import Question
 class KoboForm:
     def __init__(self, uid: str) -> None:
         self.uid = uid
+        self.headers = None
         self.metadata = {}
         self.data = None
         self.has_geo = False
