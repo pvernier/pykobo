@@ -10,9 +10,8 @@ class Manager:
         self.headers = {"Authorization": f"Token {token}"}
         self._assets = None
 
-    def get_forms(self) -> list:
-        """Return a list of all the forms the user has access to with its token.
-        The elements of that list are Form objects"""
+    def _fetch_forms(self) -> None:
+        """Fetch the list of forms the user has access to with its token."""
         url_assets = f"{self.url_api}/assets.json"
 
         res = requests.get(url=url_assets, headers=self.headers)
@@ -33,17 +32,28 @@ class Manager:
 
         self._assets = results
 
-        forms = []
+    def _create_koboform(self, form: dict) -> KoboForm:
+        kform = KoboForm(uid=form["uid"])
+        kform._extract_from_asset(form)
+        kform.headers = self.headers
+
+        return kform
+
+    def get_forms(self) -> list[KoboForm]:
+        if not self._assets:
+            self._fetch_forms()
+
+        kforms = []
         for form in self._assets:
-            f = KoboForm(uid=form["uid"])
-            f._extract_from_asset(form)
-            f.headers = self.headers
-            forms.append(f)
-        return forms
+            kform = self._create_koboform(form)
+            kforms.append(kform)
+        return kforms
 
     def get_form(self, uid: str) -> KoboForm:
         if not self._assets:
-            forms = self.get_forms()
-        form = [f for f in forms if f.uid == uid][0]
+            self._fetch_forms()
 
-        return form
+        form = [f for f in self._assets if f["uid"] == uid][0]
+        kform = self._create_koboform(form)
+
+        return kform
