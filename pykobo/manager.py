@@ -30,7 +30,7 @@ class Manager:
         # This issue seems to be very rare.
         results = [r for r in results if r["asset_type"] != "empty"]
 
-        self._assets = results
+        return results
 
     def _create_koboform(self, form: dict) -> KoboForm:
         kform = KoboForm(uid=form["uid"])
@@ -39,9 +39,9 @@ class Manager:
 
         return kform
 
-    def get_forms(self) -> list[KoboForm]:
+    def get_forms(self) -> list:
         if not self._assets:
-            self._fetch_forms()
+            self._assets = self._fetch_forms()
 
         kforms = []
         for form in self._assets:
@@ -51,7 +51,7 @@ class Manager:
 
     def get_form(self, uid: str) -> KoboForm:
         if not self._assets:
-            self._fetch_forms()
+            self._assets = self._fetch_forms()
 
         form = [f for f in self._assets if f["uid"] == uid][0]
         kform = self._create_koboform(form)
