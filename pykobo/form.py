@@ -43,7 +43,7 @@ class KoboForm:
             self._get_choices()
 
         # Fetch the data
-        res = requests.get(url=self.__url_data, headers=self.headers)
+        res = requests.get(url=self.url_data, headers=self.headers)
 
         # If error while fetching the data, return an empty DF
         if res.status_code != 200:
@@ -326,7 +326,7 @@ class KoboForm:
                         df.loc[df[column] == unique, column] = new_choices_formatted
 
     def _fetch_asset(self):
-        res = requests.get(url=self.__url_asset, headers=self.headers)
+        res = requests.get(url=self.url_asset, headers=self.headers)
         self.__asset = res.json()
         self.__content = res.json()["content"]
 
@@ -339,9 +339,9 @@ class KoboForm:
         self.metadata["has_deployment"] = asset["has_deployment"]
         self.metadata["geo"] = asset["summary"]["geo"]
 
-        self.__url_asset = asset["url"]
-        self.__url_data = asset["data"]
-        self.__base_url = "/".join(asset["downloads"][0]["url"].split("/")[:-1])
+        self.url_asset = asset["url"]
+        self.url_data = asset["data"]
+        self.base_url = "/".join(asset["url"].split("/")[:-1])
 
     def _rename_columns(self, old, new):
         """Used to change the columns names from name to label and vice versa"""
@@ -467,7 +467,7 @@ class KoboForm:
                 f"The file format '{format}' is not supported. Recognized formats are 'xls' and 'xml'"
             )
 
-        URL = f"{self.__base_url}/{self.uid}.{format}"
+        URL = f"{self.base_url}/{self.uid}.{format}"
         filename = URL.split("/")[-1]
 
         r = requests.get(URL, headers=self.headers)

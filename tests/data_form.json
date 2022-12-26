@@ -1,0 +1,13 @@
+{
+    "url":"https://kf.kobotoolbox.org/api/v2/assets/cSatm9oFcA3e9dwJdHUrBZ.json",
+    "uid":"cSatm9oFcA3e9dwJdHUrBZ",
+    "name":"Form 1",
+    "asset_type":"survey",
+    "owner__username":"owner1",
+    "date_created":"2022-12-05T14:36:19.800395Z",
+    "date_modified":"2022-12-05T14:42:03.913134Z",
+    "version_id":"sTEcVocX5XRYD5uWabjtdv",
+    "has_deployment":true,
+    "summary":{"geo":false},
+    "data":"https://kf.kobotoolbox.org/api/v2/assets/cSatm9oFcA3e9dwJdHUrBZ/data.json"
+}

@@ -1,0 +1,15 @@
+{
+    "input": 
+        {
+            "results": [
+                {"uid":"q5atm9oFcA3e9vwJdHUrBY","name":"testing","asset_type":"survey","owner__username":"owner1","date_created":"2022-12-05T14:36:19.800395Z","date_modified":"2022-12-05T14:42:03.913134Z","version_id":"vTEqVocX5XRYD5uWabjtvv","has_deployment":true, "summary":{"geo":false}},
+                {"uid":"bQMJYcZXDdcryZudVYTxo7","name":"","asset_type":"empty","owner__username":"owner1","date_created":"2022-12-05T14:32:26.081041Z","date_modified":"2022-12-05T14:32:26.081067Z","version_id":"vNEX525T2fBy9dGCvC9sEi","has_deployment":false, "summary":{}}
+            ]
+        },
+    "output": 
+        {
+            "results": [
+                {"uid":"q5atm9oFcA3e9vwJdHUrBY","name":"testing","asset_type":"survey","owner__username":"owner1","date_created":"2022-12-05T14:36:19.800395Z","date_modified":"2022-12-05T14:42:03.913134Z","version_id":"vTEqVocX5XRYD5uWabjtvv","has_deployment":true, "summary":{"geo":false}}
+            ]
+        }
+}
