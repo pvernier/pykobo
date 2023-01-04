@@ -1,3 +1,5 @@
+from typing import Union
+
 import requests
 
 from .form import KoboForm
@@ -49,9 +51,13 @@ class Manager:
             kforms.append(kform)
         return kforms
 
-    def get_form(self, uid: str) -> KoboForm:
+    def get_form(self, uid: str) -> Union[KoboForm, None]:
         if not self._assets:
             self._assets = self._fetch_forms()
+
+        # If no forms
+        if self._assets == []:
+            return None
 
         form = [f for f in self._assets if f["uid"] == uid][0]
         kform = self._create_koboform(form)
