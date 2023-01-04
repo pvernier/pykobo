@@ -1,18 +1,31 @@
+from typing import Union
+
 import requests
 
 from .form import KoboForm
 
 
 class Manager:
-    def __init__(self, url_api: str, token: str) -> None:
-        self.url_api = url_api
+    def __init__(self, url: str, api_version: int, token: str) -> None:
+        self.url = url.rstrip("/")
+        self.api_version = api_version
         self.token = token
         self.headers = {"Authorization": f"Token {token}"}
         self._assets = None
 
+    @property
+    def api_version(self):
+        return self._api_version
+
+    @api_version.setter
+    def api_version(self, value):
+        if value != 2:
+            raise ValueError("The value of 'api_version' has to be: 2.")
+        self._api_version = value
+
     def _fetch_forms(self) -> None:
         """Fetch the list of forms the user has access to with its token."""
-        url_assets = f"{self.url_api}/assets.json"
+        url_assets = f"{self.url}/api/v{self.api_version}/assets.json"
 
         res = requests.get(url=url_assets, headers=self.headers)
 
@@ -49,9 +62,13 @@ class Manager:
             kforms.append(kform)
         return kforms
 
-    def get_form(self, uid: str) -> KoboForm:
+    def get_form(self, uid: str) -> Union[KoboForm, None]:
         if not self._assets:
             self._assets = self._fetch_forms()
+
+        # If no forms
+        if self._assets == []:
+            return None
 
         form = [f for f in self._assets if f["uid"] == uid][0]
         kform = self._create_koboform(form)
