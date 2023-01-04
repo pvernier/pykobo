@@ -30,11 +30,12 @@ To get your API token, see [here](https://support.kobotoolbox.org/api.html#getti
 import pykobo
 
 
-URL_KOBO_API = "https://kf.kobotoolbox.org/api/v2"
+URL_KOBO = "https://kf.kobotoolbox.org/"
+API_VERSION = 2
 MYTOKEN = "2bc8e0201d23dac4ec1c334107698147b81513a2"
 
 # Initialize the Manager object
-km = pykobo.Manager(url_api=URL_KOBO_API, token=MYTOKEN)
+km = pykobo.Manager(url=URL_KOBO, api_version=API_VERSION, token=MYTOKEN)
 ```
 
 ### Get the list of forms you have access to
