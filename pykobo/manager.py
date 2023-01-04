@@ -6,15 +6,26 @@ from .form import KoboForm
 
 
 class Manager:
-    def __init__(self, url_api: str, token: str) -> None:
-        self.url_api = url_api
+    def __init__(self, url: str, api_version: int, token: str) -> None:
+        self.url = url.rstrip("/")
+        self.api_version = api_version
         self.token = token
         self.headers = {"Authorization": f"Token {token}"}
         self._assets = None
 
+    @property
+    def api_version(self):
+        return self._api_version
+
+    @api_version.setter
+    def api_version(self, value):
+        if value != 2:
+            raise ValueError("The value of 'api_version' has to be: 2.")
+        self._api_version = value
+
     def _fetch_forms(self) -> None:
         """Fetch the list of forms the user has access to with its token."""
-        url_assets = f"{self.url_api}/assets.json"
+        url_assets = f"{self.url}/api/v{self.api_version}/assets.json"
 
         res = requests.get(url=url_assets, headers=self.headers)
 
