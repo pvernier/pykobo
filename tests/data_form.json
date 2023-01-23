@@ -9,5 +9,6 @@
     "version_id":"sTEcVocX5XRYD5uWabjtdv",
     "has_deployment":true,
     "summary":{"geo":false},
-    "data":"https://kf.kobotoolbox.org/api/v2/assets/cSatm9oFcA3e9dwJdHUrBZ/data.json"
+    "data":"https://kf.kobotoolbox.org/api/v2/assets/cSatm9oFcA3e9dwJdHUrBZ/data.json",
+    "deployment__submission_count": 1
 }

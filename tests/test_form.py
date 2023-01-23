@@ -7,6 +7,7 @@ kform = KoboForm(uid=uid)
 
 
 metadata_form = {
+    "uid": uid,
     "name": "Form 1",
     "owner": "owner1",
     "date_created": "2022-12-05T14:36:19.800395Z",
@@ -14,6 +15,7 @@ metadata_form = {
     "version_id": "sTEcVocX5XRYD5uWabjtdv",
     "has_deployment": True,
     "geo": False,
+    "num_submissions": 1,
 }
 
 
