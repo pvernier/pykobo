@@ -331,6 +331,7 @@ class KoboForm:
         self.__content = res.json()["content"]
 
     def _extract_from_asset(self, asset: dict) -> None:
+        self.metadata["uid"] = asset["uid"]
         self.metadata["name"] = asset["name"]
         self.metadata["owner"] = asset["owner__username"]
         self.metadata["date_created"] = asset["date_created"]
