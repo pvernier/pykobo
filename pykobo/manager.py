@@ -70,7 +70,12 @@ class Manager:
         if self._assets == []:
             return None
 
-        form = [f for f in self._assets if f["uid"] == uid][0]
+        form_list = [f for f in self._assets if f["uid"] == uid]
+
+        if len(form_list) == 0:
+            raise ValueError(f"There is no form with the uid: {uid}.")
+
+        form = form_list[0]
         kform = self._create_koboform(form)
 
         return kform
