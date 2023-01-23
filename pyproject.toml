@@ -3,7 +3,7 @@ name = "pykobo"
 packages = [
     { include = "pykobo" },
 ]
-version = "0.1.3"
+version = "0.1.4"
 description = "A Python module to fetch data from the Kobo API"
 authors = ["pvernier <pvernier82@gmail.com>"]
 readme = "README.md"
