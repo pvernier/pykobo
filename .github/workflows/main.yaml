@@ -52,5 +52,7 @@ jobs:
         run: poetry run flake8 .
       - name: Run bandit
         run: poetry run bandit .
-      - name: Run saftey
-        run: poetry run safety check
+      # - name: Run safety
+      #   env:
+      #     SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+      #   run: poetry run safety check --key $SAFETY_API_KEY
