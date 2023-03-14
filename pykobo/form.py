@@ -219,7 +219,7 @@ class KoboForm:
                 and field["type"] != "end_repeat"
             ):
 
-                name_q = field["name"]
+                name_q = field["$autoname"]
                 if "label" in field:
                     label_q = field["label"][0]
                 else:
