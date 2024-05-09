@@ -69,7 +69,6 @@ class KoboForm:
 
         # If the form has at least one repeat group
         if self.has_repeats:
-
             self._extract_repeats(data)
 
             # In the parent DF delete the columns that contain the repeat groups
@@ -162,6 +161,27 @@ class KoboForm:
                     )
             self.__choices_as = choices_as
 
+    def fetch_media(self):
+        """Fetch the form's media files and store them as a Pandas DF in the attribute `media`."""
+        # Create media url
+        media_url = f"{self.base_url}/{self.uid}/files/?format=json"
+        # Request media and extract dataframe
+        res = requests.get(url=media_url, headers=self.headers)
+        media = res.json()["results"]
+        if not media.empty:
+            media[["hash", "filename", "mimetype"]] = pd.json_normalize(media.metadata)
+        self.media = pd.DataFrame(media)
+
+    def fetch_attachments(self, media_columns: list):
+        """
+        This function returns attached media in new columns,
+        one for each question with media, given df."""
+
+        for column in media_columns:
+            self.data["media_" + column] = self.data.apply(
+                lambda x: self._obtain_url(x, column), axis=1
+            )
+
     def _get_survey(self) -> None:
         """Go through all the elements of the survey and build the root structure (and the structure
         of the repeat groups if any) as a list of `Question` objects. Each `Question` object has a name
@@ -182,16 +202,13 @@ class KoboForm:
         in_repeat = False
 
         for field in survey:
-
             # Identify groups and repeats if any
             if field["type"] == "begin_group":
-
                 group_name = field["name"]
                 if "label" in field:
                     group_label = field["label"]
 
             if field["type"] == "begin_repeat":
-
                 repeat_name = field["name"]
                 if "label" in field:
                     repeat_label = field["label"]
@@ -218,7 +235,6 @@ class KoboForm:
                 and field["type"] != "end_group"
                 and field["type"] != "end_repeat"
             ):
-
                 name_q = field["$autoname"]
                 if "label" in field:
                     label_q = field["label"][0]
@@ -272,7 +288,8 @@ class KoboForm:
 
     def _get_choices(self):
         """For all the questions of type 'select_one' or 'select_multiple' assign their corresponding choices.
-        Each choice has a name and label so it's possible to display the data using any of the two."""
+        Each choice has a name and label so it's possible to display the data using any of the two.
+        """
 
         formatted_choices = {}
         choices = self.__content["choices"]
@@ -398,7 +415,6 @@ class KoboForm:
             "formhub/uuid",
             "meta/instanceID",
             "_xform_id_string",
-            "_attachments",
             "meta/deprecatedID",
             "_geolocation",
         ]
@@ -424,6 +440,31 @@ class KoboForm:
             if q.label in duplicates_count:
                 duplicates_count[q.label] += 1
                 q.label = f"{q.label} ({duplicates_count[q.label]})"
+
+    def _obtain_url(self, row, column):
+            """Aux Function to obtain url of an attached file.
+            Replaces the ' ' (spaces) by '_' from the attached files"""
+
+            df = pd.json_normalize(row["_attachments"])
+            if "filename" in df.columns:
+                df["filename_ok"] = df["filename"].apply(
+                    lambda x: x.split("/")[-1].replace(" ", "_")
+                )
+
+                if pd.isna(row[column]):
+                    name = None
+                else:
+                    name = row[column].replace(" ", "_")
+
+                if name is not None:
+                    matching_rows = df.loc[df["filename_ok"] == name]
+                    if not matching_rows.empty:
+                        url = matching_rows["download_url"].iloc[0]
+                    else:
+                        url = np.nan
+                else:
+                    url = np.nan
+                return url
 
     def _split_gps_coords(self) -> None:
         """Split the columns of type 'geopoint' into 4 new columns
