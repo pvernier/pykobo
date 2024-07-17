@@ -206,7 +206,9 @@ class Manager:
         """
         Fetch the list of users who have access to a specific form, extracting usernames from URLs.
         """
-        url_permissions = f"{self.url}/api/v{self.api_version}/assets/{uid}/permission-assignments/"
+        url_permissions = (
+            f"{self.url}/api/v{self.api_version}/assets/{uid}/permission-assignments/"
+        )
         res = requests.get(url=url_permissions, headers=self.headers)
 
         if res.status_code != 200:
@@ -216,9 +218,11 @@ class Manager:
         users_with_access = set()
 
         for permission in permissions:
-            user_url = permission.get('user')
+            user_url = permission.get("user")
             if user_url:
-                username = user_url.rstrip('/').split('/')[-1]  # Split to get the username from the url
+                username = user_url.rstrip("/").split("/")[
+                    -1
+                ]  # Split to get the username from the url
                 users_with_access.add(username)
 
         return list(users_with_access)
