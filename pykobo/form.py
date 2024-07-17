@@ -442,29 +442,29 @@ class KoboForm:
                 q.label = f"{q.label} ({duplicates_count[q.label]})"
 
     def _obtain_url(self, row, column):
-            """Aux Function to obtain url of an attached file.
-            Replaces the ' ' (spaces) by '_' from the attached files"""
+        """Aux Function to obtain url of an attached file.
+        Replaces the ' ' (spaces) by '_' from the attached files"""
 
-            df = pd.json_normalize(row["_attachments"])
-            if "filename" in df.columns:
-                df["filename_ok"] = df["filename"].apply(
-                    lambda x: x.split("/")[-1].replace(" ", "_")
-                )
+        df = pd.json_normalize(row["_attachments"])
+        if "filename" in df.columns:
+            df["filename_ok"] = df["filename"].apply(
+                lambda x: x.split("/")[-1].replace(" ", "_")
+            )
 
-                if pd.isna(row[column]):
-                    name = None
-                else:
-                    name = row[column].replace(" ", "_")
+            if pd.isna(row[column]):
+                name = None
+            else:
+                name = row[column].replace(" ", "_")
 
-                if name is not None:
-                    matching_rows = df.loc[df["filename_ok"] == name]
-                    if not matching_rows.empty:
-                        url = matching_rows["download_url"].iloc[0]
-                    else:
-                        url = np.nan
+            if name is not None:
+                matching_rows = df.loc[df["filename_ok"] == name]
+                if not matching_rows.empty:
+                    url = matching_rows["download_url"].iloc[0]
                 else:
                     url = np.nan
-                return url
+            else:
+                url = np.nan
+            return url
 
     def _split_gps_coords(self) -> None:
         """Split the columns of type 'geopoint' into 4 new columns
