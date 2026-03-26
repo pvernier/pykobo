@@ -3,56 +3,37 @@ on: [push]
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.10.9]
-        poetry-version: [1.2.2]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Run image
-        uses: abatilo/actions-poetry@v2.1.4
-        with:
-          poetry-version: ${{ matrix.poetry-version }}
+          python-version: "3.10"
       - name: Install dependencies
-        run: poetry install
+        run: uv sync
       - name: Run tests
-        run: poetry run pytest --cov=./ --cov-report=xml
+        run: uv run pytest --cov=./ --cov-report=xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v4
+
   code-quality:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.10.9]
-        poetry-version: [1.2.2]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Run image
-        uses: abatilo/actions-poetry@v2.1.4
-        with:
-          poetry-version: ${{ matrix.poetry-version }}
+          python-version: "3.10"
       - name: Install dependencies
-        run: poetry install
+        run: uv sync
       - name: Run black
-        run: poetry run black . --check
+        run: uv run black . --check
       - name: Run isort
-        run: poetry run isort . --check-only --profile black
+        run: uv run isort . --check-only --profile black
       - name: Run flake8
-        run: poetry run flake8 .
+        run: uv run flake8 .
       - name: Run bandit
-        run: poetry run bandit .
+        run: uv run bandit .
       # - name: Run safety
       #   env:
       #     SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
-      #   run: poetry run safety check --key $SAFETY_API_KEY
+      #   run: uv run safety check --key $SAFETY_API_KEY
