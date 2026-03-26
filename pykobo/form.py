@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 import pandas as pd
 import requests
@@ -30,7 +28,7 @@ class KoboForm:
     def __repr__(self):
         return f"KoboForm('{self.uid}')"
 
-    def fetch_data(self) -> Union[pd.DataFrame, dict]:
+    def fetch_data(self) -> None:
         """Fetch the form's data and store them as a Pandas DF in the attribute `data`.
         If the form has repeat groups, extract them as separate DFs"""
 
@@ -45,9 +43,10 @@ class KoboForm:
         # Fetch the data
         res = requests.get(url=self.url_data, headers=self.headers)
 
-        # If error while fetching the data, return an empty DF
+        # If error while fetching the data, store an empty DF and return
         if res.status_code != 200:
-            return pd.DataFrame()
+            self.data = pd.DataFrame()
+            return
 
         data = res.json()["results"]
 
@@ -168,9 +167,11 @@ class KoboForm:
         # Request media and extract dataframe
         res = requests.get(url=media_url, headers=self.headers)
         media = res.json()["results"]
-        if not media.empty:
-            media[["hash", "filename", "mimetype"]] = pd.json_normalize(media.metadata)
         self.media = pd.DataFrame(media)
+        if not self.media.empty:
+            self.media[["hash", "filename", "mimetype"]] = pd.json_normalize(
+                self.media["metadata"]
+            )
 
     def fetch_attachments(self, media_columns: list):
         """
@@ -187,7 +188,7 @@ class KoboForm:
         of the repeat groups if any) as a list of `Question` objects. Each `Question` object has a name
         and a label so it's possible to display the data using any of the two."""
 
-        if not self.__asset:
+        if self.__asset is None:
             self._fetch_asset()
 
         if "naming_conflicts" in self.__asset["summary"]:
@@ -344,8 +345,9 @@ class KoboForm:
 
     def _fetch_asset(self):
         res = requests.get(url=self.url_asset, headers=self.headers)
-        self.__asset = res.json()
-        self.__content = res.json()["content"]
+        asset = res.json()
+        self.__asset = asset
+        self.__content = asset["content"]
 
     def _extract_from_asset(self, asset: dict) -> None:
         self.metadata["uid"] = asset["uid"]
@@ -495,7 +497,7 @@ class KoboForm:
 
                         for idx, c in enumerate(new_geo_names):
                             q = Question(c, "geo", new_geo_labels[idx])
-                            repeat["columns"].append(index_geo + idx + 1, q)
+                            repeat["columns"].insert(index_geo + idx + 1, q)
 
                         self.data[new_geo_names] = self.repeats[repeat_name][
                             g.name

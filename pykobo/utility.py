@@ -83,8 +83,10 @@ def reconcile_columns(
 def reconcile_columns_append(
     df: pd.DataFrame, col1: str, col2: str, new_column: str, to_replace: str
 ) -> None:
-    """TODO
-    XXX: See if can merge this function and the one above into 1
+    """
+    Given a DF, replace occurrences of `to_replace` in `col1` with the
+    corresponding value from `col2`, then merge both into `new_column`
+    and drop the originals.
     """
 
     # If the column is not of type str we convert it
