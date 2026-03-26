@@ -68,7 +68,9 @@ def test_reconcile_columns_null_criteria():
 
 
 def test_reconcile_columns_string_criteria():
-    df = pd.DataFrame({"col1": ["n/a", "val1", "n/a"], "col2": ["val2", "val3", "val4"]})
+    df = pd.DataFrame(
+        {"col1": ["n/a", "val1", "n/a"], "col2": ["val2", "val3", "val4"]}
+    )
     reconcile_columns(df, "col1", "col2", "result", criteria="n/a")
     assert list(df.columns) == ["result"]
     assert df["result"].tolist() == ["val2", "val1", "val4"]

@@ -298,7 +298,9 @@ def test_fetch_data_missing_columns_added(monkeypatch):
     """Columns present in the survey but absent from the API response are added as NaN."""
     submissions_missing_col = [{"full_name": "Alice"}]
     f = _make_form()
-    monkeypatch.setattr(requests, "get", _two_call_mock(_ASSET, submissions_missing_col))
+    monkeypatch.setattr(
+        requests, "get", _two_call_mock(_ASSET, submissions_missing_col)
+    )
     f.fetch_data()
 
     assert "gender" in f.data.columns
