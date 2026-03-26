@@ -27,7 +27,7 @@ class Manager:
             raise ValueError("The value of 'api_version' has to be: 2.")
         self._api_version = value
 
-    def _fetch_forms(self) -> None:
+    def _fetch_forms(self) -> list:
         """Fetch the list of forms the user has access to with its token."""
         url_assets = f"{self.url}/api/v{self.api_version}/assets.json"
 
@@ -57,7 +57,7 @@ class Manager:
         return kform
 
     def get_forms(self) -> list:
-        if not self._assets:
+        if self._assets is None:
             self._assets = self._fetch_forms()
 
         kforms = []
@@ -67,7 +67,7 @@ class Manager:
         return kforms
 
     def get_form(self, uid: str) -> Union[KoboForm, None]:
-        if not self._assets:
+        if self._assets is None:
             self._assets = self._fetch_forms()
 
         # If no forms
@@ -91,8 +91,8 @@ class Manager:
     def upload_media_from_local(
         self, uid: str, folder_path: str, file_name: str, rewrite: bool = False
     ) -> None:
-        file_extension = os.path.splitext(file_name)[1]
-        valid_media = [".jpeg", ".jpg", ".png", ".csv", ".JPGE", ".JPG", ".PNG"]
+        file_extension = os.path.splitext(file_name)[1].lower()
+        valid_media = [".jpeg", ".jpg", ".png", ".csv"]
 
         if not folder_path.endswith(("/", "\\")):
             folder_path += "/"
@@ -108,7 +108,8 @@ class Manager:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        self._upload_media(uid, open(file_path, "rb"), file_name, rewrite)
+        with open(file_path, "rb") as fh:
+            self._upload_media(uid, fh, file_name, rewrite)
 
     def upload_media_from_server(
         self, uid: str, media_data: bytes, file_name: str, rewrite: bool = False
@@ -135,11 +136,12 @@ class Manager:
             if each["metadata"]["filename"] == file_name:
                 if rewrite:
                     del_id = each["uid"]
-                    res.status_code = 403
-                    while res.status_code != 204:
+                    while True:
                         res = requests.delete(
                             f"{url_media}/{del_id}", headers=self.headers
                         )
+                        if res.status_code == 204:
+                            break
                         time.sleep(1)
                     break
                 else:

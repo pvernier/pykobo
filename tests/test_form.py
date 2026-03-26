@@ -248,7 +248,7 @@ def test_extract_repeats_strips_group_prefix():
 
 
 def test_fetch_data_api_error(monkeypatch):
-    """A non-200 response from the data endpoint should return an empty DataFrame."""
+    """A non-200 response from the data endpoint stores an empty DataFrame in self.data."""
     f = _make_form()
     responses = [MockResponse(_ASSET, 200), MockResponse({}, 500)]
     idx = [0]
@@ -259,10 +259,10 @@ def test_fetch_data_api_error(monkeypatch):
         return r
 
     monkeypatch.setattr(requests, "get", mock_get)
-    result = f.fetch_data()
+    f.fetch_data()
 
-    assert isinstance(result, pd.DataFrame)
-    assert len(result) == 0
+    assert isinstance(f.data, pd.DataFrame)
+    assert len(f.data) == 0
 
 
 def test_fetch_data_columns_and_index(monkeypatch):
