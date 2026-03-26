@@ -85,12 +85,12 @@ class KoboForm:
         # We need to add them
         for q in self.__root_structure:
             if q.name not in self.data.columns:
-                self.data[q.name] = np.nan
+                self.data[q.name] = None
         if self.has_repeats:
             for k, v in self.repeats.items():
                 for q in self.__repeats_structure[k]["columns"]:
                     if q.name not in v.columns:
-                        v[q.name] = np.nan
+                        v[q.name] = None
 
         if self.has_geo:
             self._split_gps_coords()

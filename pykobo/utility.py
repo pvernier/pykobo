@@ -43,8 +43,8 @@ def trim_columns_values(df: pd.DataFrame) -> pd.DataFrame:
     def trim_pt(x):
         return x.strip(".") if isinstance(x, str) else x
 
-    df_temp = df.applymap(trim_ws)
-    return df_temp.applymap(trim_pt)
+    df_temp = df.map(trim_ws)
+    return df_temp.map(trim_pt)
 
 
 def reconcile_columns(
