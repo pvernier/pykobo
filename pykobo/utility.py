@@ -64,7 +64,7 @@ def reconcile_columns(
         df.loc[(df[col1].isnull()), "_temp"] = df[col2]
 
         df.loc[(df[col1].notnull()), "_temp"] = df[col1]
-    elif type(criteria) == str:
+    elif isinstance(criteria, str):
         df.loc[(df[col1] == criteria), "_temp"] = df[col2]
 
         df.loc[(df[col1] != criteria), "_temp"] = df[col1]

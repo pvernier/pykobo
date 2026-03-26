@@ -385,7 +385,7 @@ class KoboForm:
         repeats = {}
         for idx_parent, row in enumerate(rows):
             for column, value in row.items():
-                if not column.startswith("_") and type(value) == list:
+                if not column.startswith("_") and isinstance(value, list):
                     repeat_name = column.split("/")[-1]
                     if repeat_name not in repeats:
                         repeats[repeat_name] = []
