@@ -4,10 +4,10 @@ version = "0.1.6"
 description = "A Python module to fetch data from the Kobo API"
 authors = [{ name = "pvernier", email = "pvernier82@gmail.com" }]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
-    "pandas>=1.5.1",
-    "requests>=2.28.1",
+    "pandas>=2.0",
+    "requests>=2.28",
 ]
 
 [project.urls]
@@ -15,14 +15,14 @@ Repository = "https://github.com/pvernier/pykobo"
 
 [dependency-groups]
 dev = [
-    "pytest>=7.2.0",
-    "flake8>=5.0.4",
-    "black>=22.10.0",
-    "isort>=5.10.1",
-    "safety>=2.3.5",
-    "bandit>=1.7.4",
-    "pre-commit>=2.20.0",
-    "pytest-cov>=4.0.0",
+    "pytest>=8.0",
+    "flake8>=7.0",
+    "black>=24.0",
+    "isort>=5.13",
+    "safety>=3.0",
+    "bandit>=1.7",
+    "pre-commit>=4.0",
+    "pytest-cov>=5.0",
 ]
 
 [build-system]
