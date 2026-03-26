@@ -1,6 +1,6 @@
 [project]
 name = "pykobo"
-version = "0.1.6"
+version = "0.1.7"
 description = "A Python module to fetch data from the Kobo API"
 authors = [{ name = "pvernier", email = "pvernier82@gmail.com" }]
 readme = "README.md"
