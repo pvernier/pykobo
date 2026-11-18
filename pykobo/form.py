@@ -140,9 +140,9 @@ class KoboForm:
                 # If error while fetching the data, return an empty list
                 return []
             _data = response.json()
+            results.extend(_data["results"])
             if not _data["next"]:
                 break
-            results.extend(_data["results"])
             start += results_per_page
         # Since this may be called by several methods,
         # store the result of the first run in a variable to avoid being called again
