@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 import pandas as pd
 import requests
@@ -24,11 +25,12 @@ class KoboForm:
         self.naming_conflicts = None
         self.separator = "|"
         self.__initial_separator = " "
+        self.__data_dict = None
 
     def __repr__(self):
         return f"KoboForm('{self.uid}')"
 
-    def fetch_data(self) -> None:
+    def fetch_data(self, results_per_page: int = 100) -> None:
         """Fetch the form's data and store them as a Pandas DF in the attribute `data`.
         If the form has repeat groups, extract them as separate DFs"""
 
@@ -40,17 +42,10 @@ class KoboForm:
         if "choices" in self.__content:
             self._get_choices()
 
-        # Fetch the data
-        res = requests.get(url=self.url_data, headers=self.headers)
-
-        # If error while fetching the data, store an empty DF and return
-        if res.status_code != 200:
-            self.data = pd.DataFrame()
-            return
-
-        data = res.json()["results"]
-
+        data = self.get_data_dict(results_per_page)
         self.data = pd.DataFrame(data)
+        if not data:
+            return
 
         self._remove_unused_columns()
 
@@ -68,7 +63,7 @@ class KoboForm:
 
         # If the form has at least one repeat group
         if self.has_repeats:
-            self._extract_repeats(data)
+            self._extract_repeats(results)
 
             # In the parent DF delete the columns that contain the repeat groups
             # In the API there is a column with the same name as the name of
@@ -130,6 +125,30 @@ class KoboForm:
                     v, self.__repeats_structure[k]["columns"], self.__choices_as
                 )
         self.__initial_separator = self.separator
+
+    def get_data_dict(self, results_per_page: int) -> list[dict[str, Any]]:
+        """Get the data as a list of dictionaries."""
+        if self.__data_dict is not None:
+            return self.__data_dict
+        results = []
+        start = 0
+        request_kwargs = {"url": self.url_data, "headers": self.headers}
+        while True:
+            params = {"limit": results_per_page, "start": start}
+            response = requests.get(**request_kwargs, params=params)
+            if response.status_code != 200:
+                # If error while fetching the data, return an empty list
+                return []
+            _data = response.json()
+            results.extend(_data["results"])
+            if not _data["next"]:
+                break
+            start += results_per_page
+        # Since this may be called by several methods,
+        # store the result of the first run in a variable to avoid being called again
+        # Another option could functools.lru_cache??
+        self.__data_dict = results
+        return results
 
     def display(self, columns_as: str = "name", choices_as: str = "name") -> None:
         """Update the DatFrames containing the data by using names or labels for
